@@ -18,6 +18,6 @@ file( GLOB YIN_SOURCE_FILES
 
 add_executable( Yin ${YIN_SOURCE_FILES} )
 
-target_link_libraries( Yin platform GLUT )
+target_link_libraries( Yin platform glut )
 
 

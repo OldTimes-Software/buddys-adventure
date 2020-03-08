@@ -3,24 +3,65 @@
  * */
 
 #include "yin.h"
+#include "gfx.h"
 
 #include <GL/freeglut.h>
 
-static void System_Idle( void ) {
+PLPackage *globalWad = NULL;
+
+static void Sys_Display( void ) {
+	Gfx_Display();
+
+	glutSwapBuffers();
+}
+
+static void Sys_Reshape( int width, int height ) {
+	//glutReshapeWindow( YIN_DISPLAY_WIDTH, YIN_DISPLAY_HEIGHT );
+}
+
+static void Sys_Idle( void ) {
 
 }
 
 int main( int argc, char **argv ) {
+	/* initialize the platform library */
 	plInitialize( argc, argv );
+	plInitializeSubSystems( PL_SUBSYSTEM_GRAPHICS | PL_SUBSYSTEM_IO | PL_SUBSYSTEM_IMAGE );
+
+	/* mount all the dirs we need */
+	plMountLocation( "./" );
+
+	plSetupLogOutput( "log.txt" );
+	plSetupLogLevel( LOG_LEVEL_ERROR, "error", PL_COLOUR_RED, true );
+	plSetupLogLevel( LOG_LEVEL_WARN, "warning", PL_COLOUR_ORANGE, true );
+	plSetupLogLevel( LOG_LEVEL_INFO, NULL, PL_COLOUR_WHITE, true );
+
+	plRegisterStandardPackageLoaders();
+
+	PrintMsg( "Initializing...\n" );
+
+	/* ensure our wad is available */
+	globalWad = plLoadPackage( YIN_GLOBAL_WAD );
+	if ( globalWad == NULL ) {
+		PrintError( "Failed to load \"" YIN_GLOBAL_WAD "\"!\nPL: %s\n", plGetError() );
+	}
 
 	glutInitWindowSize( YIN_DISPLAY_WIDTH, YIN_DISPLAY_HEIGHT );
 	glutInitWindowPosition( 256, 256 );
 	glutInit( &argc, argv );
-	glutInitDisplayMode( GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH | GLUT_MULTISAMPLE );
+	glutInitContextVersion( 3, 2 );
+	glutInitContextFlags( GLUT_CORE_PROFILE | GLUT_DEBUG );
+	glutInitDisplayMode( GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH );
 
-	glutCreateWindow( YIN_WINDOW_TITLE );
+	char windowTitle[ 32 ];
+	snprintf( windowTitle, sizeof( windowTitle ), "%s (v%d)", YIN_WINDOW_TITLE, YIN_VERSION );
+	glutCreateWindow( windowTitle );
 
-	glutIdleFunc( System_Idle );
+	Gfx_Initialize();
+
+	glutReshapeFunc( Sys_Reshape );
+	glutDisplayFunc( Sys_Display );
+	glutIdleFunc( Sys_Idle );
 
 	glutMainLoop();
 
