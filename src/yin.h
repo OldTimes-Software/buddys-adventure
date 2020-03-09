@@ -23,11 +23,6 @@ enum {
 	YIN_KEY_CAPS   = 20,
 	YIN_KEY_ESCAPE = 27,
 	YIN_KEY_SPACE  = 32,
-
-	YIN_KEY_UP     = 65,
-	YIN_KEY_DOWN   = 66,
-	YIN_KEY_RIGHT  = 67,
-	YIN_KEY_LEFT   = 68,
 };
 
 enum {

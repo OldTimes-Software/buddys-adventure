@@ -5,6 +5,7 @@
 #include "yin.h"
 #include "gam.h"
 #include "act.h"
+#include "gfx.h"
 
 /* game specific implementation goes here! */
 
@@ -56,14 +57,8 @@ Actor *Gam_GetPlayer( void ) {
 	return playerActor;
 }
 
-void Gam_LoadMap( const char *indexName ) {
-	/* for now, we'll just ignore the index name... */
-
-	PLFile *filePtr;
-
-	/* load the points in */
-
-	filePtr = plLoadPackageFile( globalWad, "M_POINTS" );
+void Gam_LoadMapPoints( void ) {
+	PLFile *filePtr = plLoadPackageFile( globalWad, "M_POINTS" );
 	if ( filePtr == NULL ) {
 		PrintError( "Failed to find point data!\nPL: %s\n", plGetError() );
 	}
@@ -77,14 +72,15 @@ void Gam_LoadMap( const char *indexName ) {
 	}
 
 	plCloseFile( filePtr );
+}
 
-	/* and the lines */
-
-	filePtr = plLoadPackageFile( globalWad, "M_LINES" );
+void Gam_LoadMapLines( void ) {
+	PLFile *filePtr = plLoadPackageFile( globalWad, "M_LINES" );
 	if ( filePtr == NULL ) {
 		PrintError( "Failed to find line data!\nPL: %s\n", plGetError() );
 	}
 
+	bool status;
 	mapData.numLines = plReadInt32( filePtr, false, &status );
 	mapData.lines = malloc( sizeof( MapLine ) * mapData.numLines );
 	for ( unsigned int i = 0; i < mapData.numLines; ++i ) {
@@ -109,6 +105,11 @@ void Gam_LoadMap( const char *indexName ) {
 	plCloseFile( filePtr );
 }
 
+void Gam_LoadMap( const char *indexName ) {
+	Gam_LoadMapPoints();
+	Gam_LoadMapLines();
+}
+
 void Gam_DisplayMap( void ) {
 	for ( unsigned int i = 0; i < mapData.numPoints; ++i ) {
 		PLMatrix4 transform = plTranslateMatrix4( PLVector3( mapData.points[ i ].x, 0, mapData.points[ i ].y ) );
@@ -120,6 +121,7 @@ void Gam_DisplayMap( void ) {
 		MapPoint *endPoint = &mapData.points[ mapData.lines[ i ].endVertex ];
 
 		PLMatrix4 transform = plMatrix4Identity();
+		Gfx_EnableShaderProgram( SHADER_GENERIC );
 		plDrawSimpleLine(
 				&transform,
 				&PLVector3( startPoint->x, 0, startPoint->y ),
@@ -130,6 +132,16 @@ void Gam_DisplayMap( void ) {
 				&PLVector3( startPoint->x, 128, startPoint->y ),
 				&PLVector3( endPoint->x, 128, endPoint->y ),
 				&PLColour( 0, 255, 0, 255 ) );
+
+		Gfx_EnableShaderProgram( SHADER_TEXTURE );
+		extern PLTexture *fallbackTexture;
+		plDrawTexturedQuad(
+			&PLVector3( startPoint->x, 128, startPoint->y ),
+			&PLVector3( endPoint->x, 128, endPoint->y ),
+			&PLVector3( startPoint->x, 0, startPoint->y ),
+			&PLVector3( endPoint->x, 0, endPoint->y ),
+			fallbackTexture
+			);
 	}
 }
 
@@ -149,25 +161,31 @@ void Gam_End( void ) {}
 
 void Gam_GameKeyboard( unsigned char key ) {
 	float forwardVelocity = 0.0f;
-	//float strafeVelocity  = 0.0f;
+	float strafeVelocity  = 0.0f;
 	float nAngle = Act_GetAngle( playerActor );
 	switch( key ) {
 		case 'w':
-			forwardVelocity += 2.0f;
+			forwardVelocity = 2.0f;
 			break;
 		case 's':
-			forwardVelocity -= 2.0f;
+			forwardVelocity = -2.0f;
 			break;
 		case 'a':
-		case YIN_KEY_LEFT:
-			nAngle -= 2.0f;
+			strafeVelocity = -2.0f;
 			break;
 		case 'd':
-		case YIN_KEY_RIGHT:
+			strafeVelocity = 2.0f;
+			break;
+
+		case 'q':
 			nAngle += 2.0f;
+			break;
+		case 'e':
+			nAngle -= 2.0f;
 			break;
 	}
 
+#if 0
 	PLVector3 curVelocity = Act_GetVelocity( playerActor );
 
 	curVelocity.x += forwardVelocity;
@@ -196,6 +214,12 @@ void Gam_GameKeyboard( unsigned char key ) {
 	nPosition.x += curVelocity.x * 100.0f * forward.x;
 	nPosition.y += curVelocity.y * 100.0f * forward.y;
 	nPosition.z += curVelocity.z * 100.0f * forward.z;
+#else
+	PLVector3 forward = Act_GetForward( playerActor );
+	PLVector3 nPosition = Act_GetPosition( playerActor );
+	nPosition.x -= ( -forwardVelocity * forward.z ) * 5.0f;
+	nPosition.z += ( forwardVelocity * forward.x ) * 5.0f;
+#endif
 
 	Act_SetAngle( playerActor, nAngle );
 	Act_SetPosition( playerActor, &nPosition );

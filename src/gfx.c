@@ -221,7 +221,7 @@ void Gfx_Initialize( void ) {
 	}
 	playerCamera->fov        = 90.0f;
 	playerCamera->viewport.w = YIN_DISPLAY_WIDTH;
-	playerCamera->viewport.h = YIN_DISPLAY_HEIGHT;
+	playerCamera->viewport.h = -YIN_DISPLAY_HEIGHT;
 
 	/* create the default shader programs */
 	Gfx_RegisterShader( SHADER_GENERIC, "shaders/generic.vert", "shaders/vertex_colour.frag" );
