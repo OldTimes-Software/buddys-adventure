@@ -6,34 +6,80 @@
 
 #include "yin.h"
 #include "act.h"
+#include "gfx.h"
+
+typedef struct ActorSetup {
+	void (*Spawn)( struct Actor *self, void *userData );
+	void (*Tick)( struct Actor *self, void *userData );
+	void (*Draw)( struct Actor *self, void *userData );
+	void (*Destroy)( struct Actor *self, void *userData );
+} ActorSetup;
+
+void Act_DrawBasic( Actor *self, void *userData ) {
+	Gfx_DrawAxesPivot( Act_GetPosition( self ), PLVector3( 0, 0, 0 ) );
+}
+
+ActorSetup actorSpawnSetup[ MAX_ACTOR_TYPES ] = {
+		[ ACTOR_NONE   ] = { NULL, NULL, NULL, NULL },
+		[ ACTOR_PLAYER ] = { NULL, NULL, Act_DrawBasic, NULL },
+		[ ACTOR_BOSS   ] = { NULL, NULL, Act_DrawBasic, NULL },
+		[ ACTOR_SARG   ] = { NULL, NULL, Act_DrawBasic, NULL },
+		[ ACTOR_TROO   ] = { NULL, NULL, Act_DrawBasic, NULL },
+};
 
 typedef struct Actor {
 	PLVector3        position;
+	PLVector3        velocity;
 	float            angle;
+	ActorType        type;
+	ActorSetup       setup;
 	PLLinkedListNode *node;
 	void             *userData;
-	void             (*Spawn)( struct Actor *self );
-	void             (*Destroy)( struct Actor *self );
 } Actor;
 
 PLLinkedList *actorList;
 
-Actor *Act_SpawnActor( PLVector3 position, float angle, void *userData ) {
-	Actor *actor = malloc( sizeof( Actor ));
+Actor *Act_SpawnActor( ActorType type, PLVector3 position, float angle, void *userData ) {
+	Actor *actor = calloc( 1, sizeof( Actor ));
 	actor->userData = userData;
 	actor->node = plInsertLinkedListNode( actorList, actor );
+	actor->setup = actorSpawnSetup[ type ];
+	actor->position = position;
+	actor->angle = angle;
+
+	if ( actor->setup.Spawn != NULL ) {
+		actor->setup.Spawn( actor, actor->userData );
+	}
+
+	PrintMsg( "Actor has spawned!\n"
+			  "xPos: %d\nyPos: %d\ntype: %d\nflags: %d\n",
+			  (int) actor->position.x, (int) actor->position.z, type );
+
 	return actor;
 }
 
 Actor *Act_DestroyActor( Actor *self ) {
-	if ( self->Destroy != NULL) {
-		self->Destroy( self );
+	if ( self->setup.Destroy != NULL) {
+		self->setup.Destroy( self, self->userData );
 	}
 
 	plDestroyLinkedListNode( actorList, self->node );
 	free( self->userData );
 	free( self );
 	return NULL;
+}
+
+void      Act_SetPosition( Actor *self, const PLVector3 *position ) { self->position = *position; }
+PLVector3 Act_GetPosition( const Actor *self ) { return self->position; }
+void      Act_SetVelocity( Actor *self, const PLVector3 *velocity ) { self->velocity = *velocity; }
+PLVector3 Act_GetVelocity( const Actor *self ) { return self->velocity; }
+void      Act_SetAngle( Actor *self, float angle ) { self->angle = angle; }
+float     Act_GetAngle( const Actor *self ) { return self->angle; }
+
+PLVector3 Act_GetForward( const Actor *self ) {
+	PLVector3 forward;
+	plAnglesAxes( PLVector3( 0, self->angle, 0 ), NULL, NULL, &forward );
+	return forward;
 }
 
 void Act_SpawnActors( void ) {
@@ -71,12 +117,23 @@ void Act_SpawnActors( void ) {
 			PrintError( "Failed to get thing data!\nPL: %s\n", plGetError());
 		}
 
-		Act_SpawnActor(PLVector3( thing.xPos, thing.yPos, 0 ), 0.0f, NULL);
+		Act_SpawnActor( thing.type, PLVector3( thing.xPos, 0, thing.yPos ), 0.0f, NULL );
+	}
+}
 
-		PrintMsg( "Actor %d has spawned!\n"
-				  "xPos: %d\nyPos: %d\ntype: %d\nflags: %d\n",
-				  i + 1,
-				  thing.xPos, thing.yPos, thing.type, thing.flags );
+void Act_DisplayActors( void ) {
+	PLLinkedListNode *curNode = plGetRootNode( actorList );
+	while ( curNode != NULL ) {
+		Actor *actor = plGetLinkedListNodeUserData( curNode );
+		if ( actor == NULL ) {
+			PrintError( "Invalid actor data in node!\n" );
+		}
+
+		if ( actor->setup.Draw ) {
+			actor->setup.Draw( actor, actor->userData );
+		}
+
+		curNode = plGetNextLinkedListNode( curNode );
 	}
 }
 

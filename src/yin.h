@@ -9,6 +9,8 @@
 #include <PL/platform_graphics.h>
 #include <PL/platform_graphics_camera.h>
 
+#include <assert.h>
+
 #define YIN_VERSION 20200308
 
 #define YIN_DISPLAY_WIDTH  320
@@ -17,10 +19,15 @@
 #define YIN_WINDOW_TITLE "Buddy's Adventure"
 
 enum {
-	YIN_KEY_PAUSE = 19,
-	YIN_KEY_CAPS = 20,
+	YIN_KEY_PAUSE  = 19,
+	YIN_KEY_CAPS   = 20,
 	YIN_KEY_ESCAPE = 27,
-	YIN_KEY_SPACE = 32,
+	YIN_KEY_SPACE  = 32,
+
+	YIN_KEY_UP     = 65,
+	YIN_KEY_DOWN   = 66,
+	YIN_KEY_RIGHT  = 67,
+	YIN_KEY_LEFT   = 68,
 };
 
 enum {

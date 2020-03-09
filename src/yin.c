@@ -25,8 +25,10 @@ static void Sys_Display( void ) {
 
 static void Sys_Keyboard( unsigned char key, int x, int y ) {
 	if ( key == YIN_KEY_ESCAPE ) {
-
+		exit( EXIT_SUCCESS );
 	}
+
+	Gam_Keyboard( key, x, y );
 }
 
 static void Sys_Reshape( int width, int height ) {
@@ -34,7 +36,7 @@ static void Sys_Reshape( int width, int height ) {
 }
 
 static void Sys_Idle( void ) {
-
+	Sys_Display();
 }
 
 int main( int argc, char **argv ) {
@@ -68,6 +70,7 @@ int main( int argc, char **argv ) {
 	glutInitDisplayMode( GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH );
 
 	glutCreateWindow( YIN_WINDOW_TITLE );
+	glutShowOverlay();
 
 	Gfx_Initialize();
 

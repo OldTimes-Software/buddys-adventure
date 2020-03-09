@@ -15,3 +15,4 @@ typedef enum ShaderType {
 void Gfx_Initialize( void );
 void Gfx_Shutdown( void );
 void Gfx_Display( void );
+void Gfx_DrawAxesPivot( PLVector3 position, PLVector3 rotation );
