@@ -4,15 +4,29 @@
 
 #include "yin.h"
 #include "gfx.h"
+#include "act.h"
+#include "gam.h"
 
 #include <GL/freeglut.h>
 
 PLPackage *globalWad = NULL;
 
+static void Sys_Close( void ) {
+	Act_Shutdown();
+	Gam_Shutdown();
+	Gfx_Shutdown();
+}
+
 static void Sys_Display( void ) {
 	Gfx_Display();
 
 	glutSwapBuffers();
+}
+
+static void Sys_Keyboard( unsigned char key, int x, int y ) {
+	if ( key == YIN_KEY_ESCAPE ) {
+
+	}
 }
 
 static void Sys_Reshape( int width, int height ) {
@@ -53,15 +67,17 @@ int main( int argc, char **argv ) {
 	glutInitContextFlags( GLUT_CORE_PROFILE | GLUT_DEBUG );
 	glutInitDisplayMode( GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH );
 
-	char windowTitle[ 32 ];
-	snprintf( windowTitle, sizeof( windowTitle ), "%s (v%d)", YIN_WINDOW_TITLE, YIN_VERSION );
-	glutCreateWindow( windowTitle );
+	glutCreateWindow( YIN_WINDOW_TITLE );
 
 	Gfx_Initialize();
 
 	glutReshapeFunc( Sys_Reshape );
 	glutDisplayFunc( Sys_Display );
+	glutKeyboardFunc( Sys_Keyboard );
+	glutCloseFunc( Sys_Close );
 	glutIdleFunc( Sys_Idle );
+
+	Act_Initialize();
 
 	glutMainLoop();
 
