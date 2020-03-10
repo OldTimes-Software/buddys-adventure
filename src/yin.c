@@ -5,7 +5,7 @@
 #include "yin.h"
 #include "gfx.h"
 #include "act.h"
-#include "gam.h"
+#include "game.h"
 
 #include <GL/freeglut.h>
 
@@ -23,12 +23,46 @@ static void Sys_Display( void ) {
 	glutSwapBuffers();
 }
 
+static unsigned char Sys_TranslateKeyboardInput( unsigned char key ) {
+	switch( key ) {
+		default: return YIN_INPUT_INVALID;
+		case 'w': return YIN_INPUT_UP;
+		case 's': return YIN_INPUT_DOWN;
+		case 'a': return YIN_INPUT_LEFT;
+		case 'd': return YIN_INPUT_RIGHT;
+		case GLUT_KEY_SHIFT_L: return YIN_INPUT_LEFT_STICK;
+		case 27: return YIN_INPUT_START; /* escape */
+		case ' ': return YIN_INPUT_A;
+	}
+}
+
+bool keyStates[ MAX_BUTTON_INPUTS ];
+bool Sys_GetInputState( InputButton inputIndex ) {
+	return keyStates[ inputIndex ];
+}
+
 static void Sys_Keyboard( unsigned char key, int x, int y ) {
-	if ( key == YIN_KEY_ESCAPE ) {
-		exit( EXIT_SUCCESS );
+	u_unused( x );
+	u_unused( y );
+
+	key = Sys_TranslateKeyboardInput( key );
+	if ( key == YIN_INPUT_INVALID ) {
+		return;
 	}
 
-	Gam_Keyboard( key, x, y );
+	keyStates[ key ] = true;
+}
+
+static void Sys_KeyboardUp( unsigned char key, int x, int y ) {
+	u_unused( x );
+	u_unused( y );
+
+	key = Sys_TranslateKeyboardInput( key );
+	if ( key == YIN_INPUT_INVALID ) {
+		return;
+	}
+
+	keyStates[ key ] = false;
 }
 
 static void Sys_Reshape( int width, int height ) {
@@ -36,6 +70,8 @@ static void Sys_Reshape( int width, int height ) {
 }
 
 static void Sys_Idle( void ) {
+	Gam_Tick();
+
 	Sys_Display();
 }
 
@@ -70,13 +106,13 @@ int main( int argc, char **argv ) {
 	glutInitDisplayMode( GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH );
 
 	glutCreateWindow( YIN_WINDOW_TITLE );
-	glutShowOverlay();
 
 	Gfx_Initialize();
 
 	glutReshapeFunc( Sys_Reshape );
 	glutDisplayFunc( Sys_Display );
 	glutKeyboardFunc( Sys_Keyboard );
+	glutKeyboardUpFunc( Sys_KeyboardUp );
 	glutCloseFunc( Sys_Close );
 	glutIdleFunc( Sys_Idle );
 

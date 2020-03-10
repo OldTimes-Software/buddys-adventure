@@ -4,7 +4,7 @@
 
 #include "yin.h"
 #include "gfx.h"
-#include "gam.h"
+#include "game.h"
 #include "act.h"
 
 static PLShaderProgram *shaderPrograms[MAX_SHADER_TYPES];

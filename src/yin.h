@@ -18,12 +18,36 @@
 
 #define YIN_WINDOW_TITLE "Buddy's Adventure"
 
-enum {
-	YIN_KEY_PAUSE  = 19,
-	YIN_KEY_CAPS   = 20,
-	YIN_KEY_ESCAPE = 27,
-	YIN_KEY_SPACE  = 32,
-};
+#define u_unused( a ) ( void )( ( a ) )
+
+/* map everything out to controller-style input
+ * even if the user isn't necessarily using a controller
+ */
+typedef enum InputButton {
+	YIN_INPUT_INVALID,
+
+	YIN_INPUT_UP,
+	YIN_INPUT_DOWN,
+	YIN_INPUT_LEFT,
+	YIN_INPUT_RIGHT,
+
+	YIN_INPUT_LEFT_STICK,
+	YIN_INPUT_RIGHT_STICK,
+
+	YIN_INPUT_START,
+
+	YIN_INPUT_A,
+	YIN_INPUT_B,
+	YIN_INPUT_X,
+	YIN_INPUT_Y,
+
+	YIN_INPUT_LB,
+	YIN_INPUT_LT,
+	YIN_INPUT_RB,
+	YIN_INPUT_RT,
+
+	MAX_BUTTON_INPUTS
+} InputButton;
 
 enum {
 	LOG_LEVEL_ERROR,
@@ -37,3 +61,5 @@ enum {
 
 extern PLPackage *globalWad;
 #define YIN_GLOBAL_WAD "doom.wad"
+
+bool Sys_GetInputState( InputButton inputIndex );

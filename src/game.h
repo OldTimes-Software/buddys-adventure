@@ -19,5 +19,5 @@ Actor *Gam_GetPlayer( void );
 
 void Gam_Initialize( void );
 void Gam_Shutdown( void );
+void Gam_Tick( void );
 void Gam_DisplayMap( void );
-void Gam_Keyboard( unsigned char key, int x, int y );
