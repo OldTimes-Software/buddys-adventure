@@ -8,6 +8,7 @@ typedef enum ShaderType {
 	SHADER_GENERIC,
 	SHADER_TEXTURE,
 	SHADER_ALPHA_TEST,
+	SHADER_LIT,
 
 	MAX_SHADER_TYPES
 } ShaderType;

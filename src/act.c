@@ -19,9 +19,11 @@ void Act_DrawBasic( Actor *self, void *userData ) {
 	Gfx_DrawAxesPivot( Act_GetPosition( self ), PLVector3( 0, 0, 0 ) );
 }
 
+void Player_Tick( Actor *self, void *userData );
+
 ActorSetup actorSpawnSetup[ MAX_ACTOR_TYPES ] = {
 		[ ACTOR_NONE   ] = { NULL, NULL, NULL, NULL },
-		[ ACTOR_PLAYER ] = { NULL, NULL, Act_DrawBasic, NULL },
+		[ ACTOR_PLAYER ] = { NULL, Player_Tick, Act_DrawBasic, NULL },
 		[ ACTOR_BOSS   ] = { NULL, NULL, Act_DrawBasic, NULL },
 		[ ACTOR_SARG   ] = { NULL, NULL, Act_DrawBasic, NULL },
 		[ ACTOR_TROO   ] = { NULL, NULL, Act_DrawBasic, NULL },
@@ -106,10 +108,9 @@ void Act_SpawnActors( void ) {
 
 		PrintMsg( "Spawning actor %d/%d...\n", i + 1, numThings );
 
-		/* for the sake of padding, they're stored as 32bit integers
-		 * in the file (which changed in later doom versions...) */
-		thing.xPos = ( int16_t ) ( plReadInt32( filePtr, false, &status ) >> 16 );
-		thing.yPos = ( int16_t ) ( plReadInt32( filePtr, false, &status ) >> 16 );
+		/* these are intentionally flipped... */
+		thing.yPos = ( int16_t ) ( plReadInt32( filePtr, false, &status ) >> 16 ) * 2;
+		thing.xPos = ( int16_t ) ( plReadInt32( filePtr, false, &status ) >> 16 ) * 2;
 		thing.type = ( uint16_t ) ( plReadInt32( filePtr, false, &status ) >> 16 );
 		thing.flags = ( uint16_t ) ( plReadInt32( filePtr, false, &status ) >> 16 );
 
@@ -131,6 +132,22 @@ void Act_DisplayActors( void ) {
 
 		if ( actor->setup.Draw ) {
 			actor->setup.Draw( actor, actor->userData );
+		}
+
+		curNode = plGetNextLinkedListNode( curNode );
+	}
+}
+
+void Act_TickActors( void ) {
+	PLLinkedListNode *curNode = plGetRootNode( actorList );
+	while ( curNode != NULL ) {
+		Actor *actor = plGetLinkedListNodeUserData( curNode );
+		if ( actor == NULL ) {
+			PrintError( "Invalid actor data in node!\n" );
+		}
+
+		if ( actor->setup.Tick ) {
+			actor->setup.Tick( actor, actor->userData );
 		}
 
 		curNode = plGetNextLinkedListNode( curNode );

@@ -98,7 +98,7 @@ int main( int argc, char **argv ) {
 		PrintError( "Failed to load \"" YIN_GLOBAL_WAD "\"!\nPL: %s\n", plGetError() );
 	}
 
-	glutInitWindowSize( YIN_DISPLAY_WIDTH, YIN_DISPLAY_HEIGHT );
+	glutInitWindowSize( YIN_WINDOW_WIDTH, YIN_WINDOW_HEIGHT );
 	glutInitWindowPosition( 256, 256 );
 	glutInit( &argc, argv );
 	glutInitContextVersion( 3, 2 );

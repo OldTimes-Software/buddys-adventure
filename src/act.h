@@ -23,6 +23,7 @@ void      Act_Initialize( void );
 void      Act_Shutdown( void );
 void      Act_SpawnActors( void );
 void      Act_DisplayActors( void );
+void      Act_TickActors( void );
 Actor     *Act_SpawnActor( ActorType type, PLVector3 position, float angle, void *userData );
 Actor     *Act_DestroyActor( Actor *self );
 void      Act_SetPosition( Actor *self, const PLVector3 *position );

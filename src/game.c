@@ -53,6 +53,24 @@ MenuState Gam_GetMenuState( void ) {
 
 Actor *playerActor = NULL;
 
+void Player_Tick( Actor *self, void *userData ) {
+	PLVector3 curVelocity = Act_GetVelocity( self );
+	/* clamp the velocity as necessary */
+	if ( curVelocity.x < 2.0f && curVelocity.x > -2.0f ) {
+		curVelocity.x = 0.0f;
+	} else if ( curVelocity.x > PLAYER_MAX_VELOCITY ) {
+		curVelocity.x = PLAYER_MAX_VELOCITY;
+	} else if ( curVelocity.x < -PLAYER_MAX_VELOCITY ) {
+		curVelocity.x = -PLAYER_MAX_VELOCITY;
+	}
+
+	PLVector3 curPosition = Act_GetPosition( self );
+	curPosition = plAddVector3( curPosition, curVelocity );
+
+	Act_SetPosition( self, &curPosition );
+	Act_SetVelocity( self, &curVelocity );
+}
+
 Actor *Gam_GetPlayer( void ) {
 	return playerActor;
 }
@@ -67,8 +85,9 @@ void Gam_LoadMapPoints( void ) {
 	mapData.numPoints = plReadInt32( filePtr, false, &status );
 	mapData.points = malloc( sizeof( MapPoint ) * mapData.numPoints );
 	for ( unsigned int i = 0; i < mapData.numPoints; ++i ) {
-		mapData.points[ i ].x = ( int16_t ) ( plReadInt32( filePtr, false, &status ) >> 16 );
-		mapData.points[ i ].y = ( int16_t ) ( plReadInt32( filePtr, false, &status ) >> 16 );
+		/* flipped so they match up with what we need */
+		mapData.points[ i ].y = ( int16_t ) ( plReadInt32( filePtr, false, &status ) >> 16 ) * 2;
+		mapData.points[ i ].x = ( int16_t ) ( plReadInt32( filePtr, false, &status ) >> 16 ) * 2;
 	}
 
 	plCloseFile( filePtr );
@@ -111,15 +130,11 @@ void Gam_LoadMap( const char *indexName ) {
 }
 
 void Gam_DisplayMap( void ) {
-	for ( unsigned int i = 0; i < mapData.numPoints; ++i ) {
-		PLMatrix4 transform = plTranslateMatrix4( PLVector3( mapData.points[ i ].x, 0, mapData.points[ i ].y ) );
-		plDrawSimpleLine( &transform, &PLVector3( 0, 0, 0 ), &PLVector3( 0, 128, 0 ), &PLColour( 255, 0, 0, 255 ) );
-	}
-
 	for ( unsigned int i = 0; i < mapData.numLines; ++i ) {
 		MapPoint *startPoint = &mapData.points[ mapData.lines[ i ].startVertex ];
 		MapPoint *endPoint = &mapData.points[ mapData.lines[ i ].endVertex ];
 
+		/*
 		PLMatrix4 transform = plMatrix4Identity();
 		Gfx_EnableShaderProgram( SHADER_GENERIC );
 		plDrawSimpleLine(
@@ -132,8 +147,9 @@ void Gam_DisplayMap( void ) {
 				&PLVector3( startPoint->x, 128, startPoint->y ),
 				&PLVector3( endPoint->x, 128, endPoint->y ),
 				&PLColour( 0, 255, 0, 255 ) );
+		*/
 
-		Gfx_EnableShaderProgram( SHADER_TEXTURE );
+		Gfx_EnableShaderProgram( SHADER_LIT );
 		extern PLTexture *fallbackTexture;
 		plDrawTexturedQuad(
 			&PLVector3( startPoint->x, 128, startPoint->y ),
@@ -181,9 +197,9 @@ void Gam_Tick( void ) {
 
 	float nAngle = Act_GetAngle( playerActor );
 	if ( Sys_GetInputState( YIN_INPUT_LEFT ) ) {
-		nAngle += 5.0f;
-	} else if ( Sys_GetInputState( YIN_INPUT_RIGHT ) ) {
 		nAngle -= 5.0f;
+	} else if ( Sys_GetInputState( YIN_INPUT_RIGHT ) ) {
+		nAngle += 5.0f;
 	}
 
 #if 0
@@ -224,6 +240,8 @@ void Gam_Tick( void ) {
 
 	Act_SetAngle( playerActor, nAngle );
 	Act_SetPosition( playerActor, &nPosition );
+
+	Act_TickActors();
 }
 
 void Gam_Initialize( void ) {}
