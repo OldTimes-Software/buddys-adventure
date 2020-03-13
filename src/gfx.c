@@ -25,8 +25,10 @@ static PLTexture *playScrnTexture = NULL;
 
 static PLTexture *numTextureTable[10];
 
-static PLFrameBuffer *scaleBuffer;
-static PLTexture *scaleBufferTexture;
+static PLTexture **wallTextures;
+static unsigned int numWallTextures;
+static PLTexture **floorTextures;
+static unsigned int numFloorTextures;
 
 PLTexture *Gfx_GenerateTextureFromData( uint8_t *data, unsigned int w, unsigned int h, unsigned int numChannels,
 										bool generateMipMap ) {
@@ -72,6 +74,77 @@ PLTexture *Gfx_GenerateTextureFromData( uint8_t *data, unsigned int w, unsigned 
 	plDestroyImage( imageData );
 
 	return texture;
+}
+
+PLTexture *Gfx_GetWallTexture( unsigned int index ) {
+	if ( index >= numWallTextures ) {
+		PrintWarn( "Invalid wall texture slot (%d/%d)!\n", index, numWallTextures );
+		return fallbackTexture;
+	}
+
+	return wallTextures[ index ];
+}
+
+void Gfx_LoadWallTextures( void ) {
+	unsigned int posStart = plGetPackageTableIndex( globalWad, "P_START" );
+	if ( plGetFunctionResult() != PL_RESULT_SUCCESS ) {
+		PrintError( "Failed to find the start of the wall table!\nPL: %s\n", plGetError() );
+	}
+
+	unsigned int posEnd = plGetPackageTableIndex( globalWad, "P_END" );
+	if ( plGetFunctionResult() != PL_RESULT_SUCCESS ) {
+		PrintError( "Failed to find the end of the wall table!\nPL: %s\n", plGetError() );
+	}
+
+	numWallTextures = posEnd - posStart;
+	wallTextures = calloc( numWallTextures, sizeof( PLTexture* ) );
+
+	for ( unsigned int i = 0; i < numWallTextures; ++i ) {
+		/* ensure the slot has a fallback if we abort */
+		wallTextures[ i ] = fallbackTexture;
+
+		unsigned int fileIndex = posStart + ( i + 1 );
+		PLFile *filePtr = plLoadPackageFileByIndex( globalWad, fileIndex );
+		if ( filePtr == NULL ) {
+			PrintWarn( "Failed to load wall texture %d!\nPL: %s\n", fileIndex, plGetError() );
+			continue;
+		}
+
+		bool status;
+		uint8_t h = plReadInt8( filePtr, &status );
+		uint8_t w = plReadInt8( filePtr, &status );
+		if ( !status ) {
+			PrintWarn( "Failed to read in width and height for wall %d!\nPL: %s\n", fileIndex, plGetError() );
+			plCloseFile( filePtr );
+			continue;
+		}
+
+
+
+		unsigned int bufferSize = w * h;
+		uint8_t *buffer = malloc( bufferSize );
+		if ( plReadFile( filePtr, buffer, sizeof( uint8_t ), bufferSize ) != bufferSize ) {
+			PrintWarn( "Failed to read in wall %d texture data!\nPL: %s\n", fileIndex, plGetError() );
+			plCloseFile( filePtr );
+			continue;
+		}
+
+		plCloseFile( filePtr );
+
+		/* now convert using the palette (I'm lazy, so we'll just convert to rgba) */
+		PLColour *colourBuffer = malloc( sizeof( PLColour ) * bufferSize );
+		for ( unsigned int j = 0; j < bufferSize; ++j ) {
+			colourBuffer[ j ].r = playPal[ buffer[ j ]].r;
+			colourBuffer[ j ].g = playPal[ buffer[ j ]].g;
+			colourBuffer[ j ].b = playPal[ buffer[ j ]].b;
+			colourBuffer[ j ].a = ( buffer[ j ] == 255 ) ? 0 : 255;
+		}
+
+		wallTextures[ i ] = Gfx_GenerateTextureFromData(( uint8_t * ) colourBuffer, w, h, 4, false );
+
+		free( buffer );
+		free( colourBuffer );
+	}
 }
 
 void Gfx_LoadPalette( RGBMap *palette, const char *indexName ) {
@@ -276,6 +349,8 @@ void Gfx_Initialize( void ) {
 
 	plBindFrameBuffer( NULL, PL_FRAMEBUFFER_DRAW );
 #endif
+
+	Gfx_LoadWallTextures();
 
 	plSetDepthBufferMode( PL_DEPTHBUFFER_ENABLE );
 	plSetDepthMask( true );

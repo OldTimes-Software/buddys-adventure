@@ -156,7 +156,7 @@ void Gam_DisplayMap( void ) {
 			&PLVector3( endPoint->x, 128, endPoint->y ),
 			&PLVector3( startPoint->x, 0, startPoint->y ),
 			&PLVector3( endPoint->x, 0, endPoint->y ),
-			fallbackTexture
+			Gfx_GetWallTexture( 20 )
 			);
 	}
 }
