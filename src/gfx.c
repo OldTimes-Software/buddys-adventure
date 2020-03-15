@@ -366,17 +366,10 @@ void Gfx_Initialize( void ) {
 
 	/* generate fallback texture */
 	PLColour fallbackData[] = {
-#if 0 /* source engine colours, bleh!! */
-	{ 255, 0, 220, 255 },
-	{ 0, 0, 0, 255 },
-	{ 0, 0, 0, 255 },
-	{ 255, 0, 220, 255 },
-#else
 			{ 128, 0, 128, 255 },
 			{ 0, 128, 128, 255 },
 			{ 0, 128, 128, 255 },
 			{ 128, 0, 128, 255 },
-#endif
 	};
 	fallbackTexture = Gfx_GenerateTextureFromData(( uint8_t * ) fallbackData, 2, 2, 4, false );
 	if ( fallbackTexture == NULL) {
@@ -469,7 +462,7 @@ void Gfx_DisplayScene( void ) {
 
 	plSetupCamera( playerCamera );
 
-#if 1
+#if 0
 	PLMatrix4 transform;
 
 	transform = plMultiplyMatrix4( plMatrix4Identity(),

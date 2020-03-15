@@ -19,7 +19,6 @@ static MenuState menuState = MENU_STATE_START;
 typedef struct MapPoint {
 	int16_t x, y;
 } MapPoint;
-PL_STATIC_ASSERT( sizeof( MapPoint ) == 4, "Invalid MapPoint size!" );
 
 typedef struct MapLine {
 	uint16_t startVertex;
@@ -28,14 +27,24 @@ typedef struct MapLine {
 	uint16_t unknown0;
 	uint16_t colSomething;
 	uint8_t  unknown1;
-	uint8_t  horScale;
+	uint8_t  hScale;
 	uint16_t unknown2;
 	uint32_t unknown3;
 	uint16_t unknown4;
 } MapLine;
-//PL_STATIC_ASSERT( sizeof( MapLine ) == 20, "Invalid MapLine size!" );
+
+typedef struct MapArea {
+	unsigned int numAreas;
+	uint32_t unknown0;
+	uint16_t unused0;
+	uint16_t unused1;
+	unsigned int numLines;
+	unsigned int *lineIndices;
+} MapArea;
 
 struct {
+	MapArea      *areas;
+	unsigned int numAreas;
 	MapPoint     *points;
 	unsigned int numPoints;
 	MapLine      *lines;
@@ -105,20 +114,40 @@ void Gam_LoadMapLines( void ) {
 	for ( unsigned int i = 0; i < mapData.numLines; ++i ) {
 		mapData.lines[ i ].startVertex  = plReadInt16( filePtr, false, &status );
 		mapData.lines[ i ].endVertex    = plReadInt16( filePtr, false, &status );
-		/*
 		mapData.lines[ i ].flags        = plReadInt16( filePtr, false, &status );
 		mapData.lines[ i ].unknown0     = plReadInt16( filePtr, false, &status );
 		mapData.lines[ i ].colSomething = plReadInt16( filePtr, false, &status );
 		mapData.lines[ i ].unknown1     = plReadInt8( filePtr, &status );
-		mapData.lines[ i ].horScale     = plReadInt8( filePtr, &status );
+		mapData.lines[ i ].hScale     = plReadInt8( filePtr, &status );
 		mapData.lines[ i ].unknown2     = plReadInt16( filePtr, false, &status );
 		mapData.lines[ i ].unknown3     = plReadInt32( filePtr, false, &status );
 		mapData.lines[ i ].unknown4     = plReadInt16( filePtr, false, &status );
-		 */
-
-		plFileSeek( filePtr, 16, SEEK_CUR );
 
 		printf( "%d %d\n", mapData.lines[ i ].startVertex, mapData.lines[ i ].endVertex );
+	}
+
+	plCloseFile( filePtr );
+}
+
+void Gam_LoadMapAreas( void ) {
+	PLFile *filePtr = plLoadPackageFile( globalWad, "M_AREAS" );
+	if ( filePtr == NULL ) {
+		PrintError( "Failed to load area data!\nPL: %s\n", plGetError() );
+	}
+
+	bool status;
+	mapData.numAreas = plReadInt32( filePtr, false, &status );
+	mapData.areas = malloc( sizeof( MapArea ) * mapData.numAreas );
+	for ( unsigned int i = 0; i < mapData.numAreas; ++i ) {
+		mapData.areas[ i ].unknown0 = plReadInt32( filePtr, false, &status );
+		mapData.areas[ i ].unused0 = plReadInt16( filePtr, false, &status );
+		mapData.areas[ i ].unused1 = plReadInt16( filePtr, false, &status );
+		mapData.areas[ i ].numLines = plReadInt16( filePtr, false, &status );
+
+		mapData.areas[ i ].lineIndices = malloc( sizeof( unsigned int ) * mapData.areas[ i ].numLines );
+		for ( unsigned int j = 0; j < mapData.areas[ i ].numLines; ++j ) {
+			mapData.areas[ i ].lineIndices[ j ] = plReadInt16( filePtr, false, &status );
+		}
 	}
 
 	plCloseFile( filePtr );
@@ -127,41 +156,30 @@ void Gam_LoadMapLines( void ) {
 void Gam_LoadMap( const char *indexName ) {
 	Gam_LoadMapPoints();
 	Gam_LoadMapLines();
+	Gam_LoadMapAreas();
 }
 
 void Gam_DisplayMap( void ) {
-	for ( unsigned int i = 0; i < mapData.numLines; ++i ) {
-		MapPoint *startPoint = &mapData.points[ mapData.lines[ i ].startVertex ];
-		MapPoint *endPoint = &mapData.points[ mapData.lines[ i ].endVertex ];
+	Gfx_EnableShaderProgram( SHADER_LIT );
 
-		/*
-		PLMatrix4 transform = plMatrix4Identity();
-		Gfx_EnableShaderProgram( SHADER_GENERIC );
-		plDrawSimpleLine(
-				&transform,
-				&PLVector3( startPoint->x, 0, startPoint->y ),
-				&PLVector3( endPoint->x, 0, endPoint->y ),
-				&PLColour( 0, 255, 0, 255 ) );
-		plDrawSimpleLine(
-				&transform,
-				&PLVector3( startPoint->x, 128, startPoint->y ),
-				&PLVector3( endPoint->x, 128, endPoint->y ),
-				&PLColour( 0, 255, 0, 255 ) );
-		*/
+	for ( unsigned int i = 0; i < mapData.numAreas; ++i ) {
+		const MapArea *area = &mapData.areas[ i ];
+		for ( unsigned int j = 0; j < area->numLines; ++j ) {
+			MapPoint *startPoint = &mapData.points[ mapData.lines[ area->lineIndices[ j ] ].startVertex ];
+			MapPoint *endPoint = &mapData.points[ mapData.lines[ area->lineIndices[ j ] ].endVertex ];
 
-		Gfx_EnableShaderProgram( SHADER_LIT );
+			PLTexture *texture = Gfx_GetWallTexture( 20 );
+			unsigned int wallHeight = texture->h * 2;
 
-		PLTexture *texture = Gfx_GetWallTexture( 20 );
-		unsigned int wallHeight = texture->h * 2;
-
-		plDrawTexturedQuad(
-			&PLVector3( startPoint->x, wallHeight, startPoint->y ),
-			&PLVector3( endPoint->x, wallHeight, endPoint->y ),
-			&PLVector3( startPoint->x, 0, startPoint->y ),
-			&PLVector3( endPoint->x, 0, endPoint->y ),
-			2, 2,
-			texture
+			plDrawTexturedQuad(
+					&PLVector3( startPoint->x, wallHeight, startPoint->y ),
+					&PLVector3( endPoint->x, wallHeight, endPoint->y ),
+					&PLVector3( startPoint->x, 0, startPoint->y ),
+					&PLVector3( endPoint->x, 0, endPoint->y ),
+					2, 2,
+					texture
 			);
+		}
 	}
 }
 
