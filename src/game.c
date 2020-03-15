@@ -150,13 +150,17 @@ void Gam_DisplayMap( void ) {
 		*/
 
 		Gfx_EnableShaderProgram( SHADER_LIT );
-		extern PLTexture *fallbackTexture;
+
+		PLTexture *texture = Gfx_GetWallTexture( 20 );
+		unsigned int wallHeight = texture->h * 2;
+
 		plDrawTexturedQuad(
-			&PLVector3( startPoint->x, 128, startPoint->y ),
-			&PLVector3( endPoint->x, 128, endPoint->y ),
+			&PLVector3( startPoint->x, wallHeight, startPoint->y ),
+			&PLVector3( endPoint->x, wallHeight, endPoint->y ),
 			&PLVector3( startPoint->x, 0, startPoint->y ),
 			&PLVector3( endPoint->x, 0, endPoint->y ),
-			Gfx_GetWallTexture( 20 )
+			2, 2,
+			texture
 			);
 	}
 }
