@@ -21,6 +21,8 @@
 
 #define YIN_WINDOW_TITLE "Buddy's Adventure"
 
+#define YIN_TICK_RATE 60 /* ms */
+
 #define u_unused( a ) ( void )( ( a ) )
 
 /* map everything out to controller-style input

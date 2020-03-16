@@ -10,7 +10,6 @@ typedef enum MenuState {
 } MenuState;
 
 #define PLAYER_VIEW_OFFSET  75.0f
-#define PLAYER_MAX_VELOCITY 10.0f
 
 MenuState Gam_GetMenuState( void );
 
@@ -20,3 +19,4 @@ Actor *Gam_GetPlayer( void );
 void Gam_Initialize( void );
 void Gam_Shutdown( void );
 void Gam_Tick( void );
+void Gam_Keyboard( unsigned char key );

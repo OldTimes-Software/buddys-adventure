@@ -57,7 +57,7 @@ PLTexture *Gfx_GenerateTextureFromData( uint8_t *data, unsigned int w, unsigned 
 		PrintWarn( "Failed to generate image data!\nPL: %s\n", plGetError());
 	}
 
-#if 1
+#if 0
 	char outName[ 64 ];
 	snprintf( outName, sizeof( outName ), "test_%dx%d-%d.png", w, h, numChannels );
 	plWriteImage( imageData, outName );

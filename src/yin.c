@@ -45,6 +45,8 @@ static void Sys_Keyboard( unsigned char key, int x, int y ) {
 	u_unused( x );
 	u_unused( y );
 
+	Gam_Keyboard( key );
+
 	key = Sys_TranslateKeyboardInput( key );
 	if ( key == YIN_INPUT_INVALID ) {
 		return;
@@ -70,9 +72,13 @@ static void Sys_Reshape( int width, int height ) {
 }
 
 static void Sys_Idle( void ) {
+	Sys_Display();
+}
+
+static void Sys_Tick( int time ) {
 	Gam_Tick();
 
-	Sys_Display();
+	glutTimerFunc( YIN_TICK_RATE, Sys_Tick, 0 );
 }
 
 int main( int argc, char **argv ) {
@@ -115,6 +121,8 @@ int main( int argc, char **argv ) {
 	glutKeyboardUpFunc( Sys_KeyboardUp );
 	glutCloseFunc( Sys_Close );
 	glutIdleFunc( Sys_Idle );
+
+	glutTimerFunc( YIN_TICK_RATE, Sys_Tick, 0 );
 
 	Act_Initialize();
 

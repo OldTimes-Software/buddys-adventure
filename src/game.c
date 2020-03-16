@@ -5,7 +5,6 @@
 #include "yin.h"
 #include "game.h"
 #include "act.h"
-#include "gfx.h"
 #include "map.h"
 
 /* game specific implementation goes here! */
@@ -17,29 +16,17 @@ typedef enum InputTarget {
 static InputTarget inputTarget = INPUT_TARGET_MENU;
 static MenuState menuState = MENU_STATE_START;
 
+typedef enum GameState {
+	GAME_STATE_PAUSED,
+	GAME_STATE_ACTIVE,
+} GameState;
+GameState gameState = GAME_STATE_PAUSED;
+
 MenuState Gam_GetMenuState( void ) {
 	return menuState;
 }
 
-Actor *playerActor = NULL;
-
-void Player_Tick( Actor *self, void *userData ) {
-	PLVector3 curVelocity = Act_GetVelocity( self );
-	/* clamp the velocity as necessary */
-	if ( curVelocity.x < 2.0f && curVelocity.x > -2.0f ) {
-		curVelocity.x = 0.0f;
-	} else if ( curVelocity.x > PLAYER_MAX_VELOCITY ) {
-		curVelocity.x = PLAYER_MAX_VELOCITY;
-	} else if ( curVelocity.x < -PLAYER_MAX_VELOCITY ) {
-		curVelocity.x = -PLAYER_MAX_VELOCITY;
-	}
-
-	PLVector3 curPosition = Act_GetPosition( self );
-	curPosition = plAddVector3( curPosition, curVelocity );
-
-	Act_SetPosition( self, &curPosition );
-	Act_SetVelocity( self, &curVelocity );
-}
+static Actor *playerActor = NULL;
 
 Actor *Gam_GetPlayer( void ) {
 	return playerActor;
@@ -57,18 +44,12 @@ void Gam_Start( void ) {
 	playerActor = Act_SpawnActor( ACTOR_PLAYER, PLVector3( 0, 0, 0 ), 0.0f, NULL );
 }
 
-void Gam_End( void ) {}
+void Gam_End( void ) {
+
+}
 
 void Gam_Tick( void ) {
-	if ( inputTarget == INPUT_TARGET_MENU ) {
-		switch( menuState ) {
-			case MENU_STATE_START:
-				/* if any key was hit here, just switch to the game */
-				Gam_Start();
-				break;
-			default:
-			PrintError( "Unhandled menu state, %d!\n", menuState );
-		}
+	if ( gameState == GAME_STATE_PAUSED ) {
 		return;
 	}
 
@@ -126,6 +107,21 @@ void Gam_Tick( void ) {
 	Act_SetPosition( playerActor, &nPosition );
 
 	Act_TickActors();
+}
+
+void Gam_Keyboard( unsigned char key ) {
+	if ( inputTarget == INPUT_TARGET_MENU ) {
+		switch( menuState ) {
+			case MENU_STATE_START:
+				/* if any key was hit here, just switch to the game */
+				Gam_Start();
+				gameState = GAME_STATE_ACTIVE;
+				break;
+			default:
+			PrintError( "Unhandled menu state, %d!\n", menuState );
+		}
+		return;
+	}
 }
 
 void Gam_Initialize( void ) {}
