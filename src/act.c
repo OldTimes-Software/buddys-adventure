@@ -9,7 +9,7 @@
 #include "gfx.h"
 
 typedef struct ActorSetup {
-	void (*Spawn)( struct Actor *self, void *userData );
+	void (*Spawn)( struct Actor *self );
 	void (*Tick)( struct Actor *self, void *userData );
 	void (*Draw)( struct Actor *self, void *userData );
 	void (*Destroy)( struct Actor *self, void *userData );
@@ -19,11 +19,12 @@ void Act_DrawBasic( Actor *self, void *userData ) {
 	Gfx_DrawAxesPivot( Act_GetPosition( self ), PLVector3( 0, 0, 0 ) );
 }
 
+void Player_Spawn( Actor *self );
 void Player_Tick( Actor *self, void *userData );
 
 ActorSetup actorSpawnSetup[ MAX_ACTOR_TYPES ] = {
 		[ ACTOR_NONE   ] = { NULL, NULL, NULL, NULL },
-		[ ACTOR_PLAYER ] = { NULL, Player_Tick, Act_DrawBasic, NULL },
+		[ ACTOR_PLAYER ] = { Player_Spawn, Player_Tick, NULL, NULL },
 		[ ACTOR_BOSS   ] = { NULL, NULL, Act_DrawBasic, NULL },
 		[ ACTOR_SARG   ] = { NULL, NULL, Act_DrawBasic, NULL },
 		[ ACTOR_TROO   ] = { NULL, NULL, Act_DrawBasic, NULL },
@@ -33,6 +34,7 @@ typedef struct Actor {
 	PLVector3        position;
 	PLVector3        velocity;
 	float            angle;
+	float            viewOffset;
 	ActorType        type;
 	ActorSetup       setup;
 	PLLinkedListNode *node;
@@ -41,16 +43,15 @@ typedef struct Actor {
 
 PLLinkedList *actorList;
 
-Actor *Act_SpawnActor( ActorType type, PLVector3 position, float angle, void *userData ) {
+Actor *Act_SpawnActor( ActorType type, PLVector3 position, float angle ) {
 	Actor *actor = calloc( 1, sizeof( Actor ));
-	actor->userData = userData;
 	actor->node = plInsertLinkedListNode( actorList, actor );
 	actor->setup = actorSpawnSetup[ type ];
 	actor->position = position;
 	actor->angle = angle;
 
 	if ( actor->setup.Spawn != NULL ) {
-		actor->setup.Spawn( actor, actor->userData );
+		actor->setup.Spawn( actor );
 	}
 
 	PrintMsg( "Actor has spawned!\n"
@@ -77,11 +78,28 @@ void      Act_SetVelocity( Actor *self, const PLVector3 *velocity ) { self->velo
 PLVector3 Act_GetVelocity( const Actor *self ) { return self->velocity; }
 void      Act_SetAngle( Actor *self, float angle ) { self->angle = angle; }
 float     Act_GetAngle( const Actor *self ) { return self->angle; }
+void      Act_SetViewOffset( Actor *self, float viewOffset ) { self->viewOffset = viewOffset; }
+float     Act_GetViewOffset( Actor *self ) { return self->viewOffset; }
 
 PLVector3 Act_GetForward( const Actor *self ) {
+#if 0 /* this doesn't work... */
 	PLVector3 forward;
 	plAnglesAxes( PLVector3( 0, self->angle, 0 ), NULL, NULL, &forward );
 	return forward;
+#else
+	float angle = plDegreesToRadians( self->angle );
+	float s = sinf( angle );
+	float c = cosf( angle );
+
+	PLVector3 right;
+	plAnglesAxes( PLVector3( 0, angle, 0 ), &right, NULL, NULL );
+
+	return PLVector3(
+			right.x * c - right.y * s,
+			right.x * s + right.y * c,
+			0.0f
+			);
+#endif
 }
 
 void Act_SpawnActors( void ) {
@@ -118,7 +136,7 @@ void Act_SpawnActors( void ) {
 			PrintError( "Failed to get thing data!\nPL: %s\n", plGetError());
 		}
 
-		Act_SpawnActor( thing.type, PLVector3( thing.xPos, 0, thing.yPos ), 0.0f, NULL );
+		Act_SpawnActor( thing.type, PLVector3( thing.xPos, 0, thing.yPos ), 0.0f );
 	}
 }
 

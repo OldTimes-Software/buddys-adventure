@@ -21,7 +21,7 @@
 
 #define YIN_WINDOW_TITLE "Buddy's Adventure"
 
-#define YIN_TICK_RATE 60 /* ms */
+#define YIN_TICK_RATE 24 /* ms */
 
 #define u_unused( a ) ( void )( ( a ) )
 
@@ -68,3 +68,5 @@ extern PLPackage *globalWad;
 #define YIN_GLOBAL_WAD "doom.wad"
 
 bool Sys_GetInputState( InputButton inputIndex );
+
+unsigned int Sys_GetNumTicks( void );

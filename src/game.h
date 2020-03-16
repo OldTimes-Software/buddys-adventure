@@ -8,9 +8,6 @@ typedef enum MenuState {
 	MENU_STATE_START, /* draw start screen */
 	MENU_STATE_HUD,   /* hud/overlay mode */
 } MenuState;
-
-#define PLAYER_VIEW_OFFSET  75.0f
-
 MenuState Gam_GetMenuState( void );
 
 typedef struct Actor Actor;

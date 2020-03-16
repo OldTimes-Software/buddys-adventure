@@ -517,12 +517,23 @@ void Gfx_DisplayScene( void ) {
 		return;
 	}
 
-	Gfx_EnableShaderProgram( SHADER_GENERIC );
-
 	Actor *player = Gam_GetPlayer();
+	if ( player == NULL ) {
+		return;
+	}
+
 	playerCamera->angles.y = Act_GetAngle( player );
 	playerCamera->position = Act_GetPosition( player );
-	playerCamera->position.y += PLAYER_VIEW_OFFSET;
+
+	/* view bob! */
+	PLVector3 velocity = Act_GetVelocity( player );
+	float velocityVector = plVector3Length( &velocity );
+	static float viewBob;
+	viewBob += ( sinf( Sys_GetNumTicks() * 150.0f ) / 10.0f ) * velocityVector;
+
+	playerCamera->position.y += Act_GetViewOffset( player ) + viewBob;
+
+	Gfx_EnableShaderProgram( SHADER_GENERIC );
 
 	plSetupCamera( playerCamera );
 

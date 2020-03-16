@@ -11,6 +11,8 @@
 
 PLPackage *globalWad = NULL;
 
+unsigned int numTicks = 0;
+
 static void Sys_Close( void ) {
 	Act_Shutdown();
 	Gam_Shutdown();
@@ -78,7 +80,13 @@ static void Sys_Idle( void ) {
 static void Sys_Tick( int time ) {
 	Gam_Tick();
 
+	numTicks++;
+
 	glutTimerFunc( YIN_TICK_RATE, Sys_Tick, 0 );
+}
+
+unsigned int Sys_GetNumTicks( void ) {
+	return numTicks;
 }
 
 int main( int argc, char **argv ) {

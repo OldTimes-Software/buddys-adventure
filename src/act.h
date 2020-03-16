@@ -24,7 +24,7 @@ void      Act_Shutdown( void );
 void      Act_SpawnActors( void );
 void      Act_DisplayActors( void );
 void      Act_TickActors( void );
-Actor     *Act_SpawnActor( ActorType type, PLVector3 position, float angle, void *userData );
+Actor     *Act_SpawnActor( ActorType type, PLVector3 position, float angle );
 Actor     *Act_DestroyActor( Actor *self );
 void      Act_SetPosition( Actor *self, const PLVector3 *position );
 PLVector3 Act_GetPosition( const Actor *self );
@@ -32,4 +32,8 @@ void      Act_SetVelocity( Actor *self, const PLVector3 *velocity );
 PLVector3 Act_GetVelocity( const Actor *self );
 void      Act_SetAngle( Actor *self, float angle );
 float     Act_GetAngle( const Actor *self );
+
+void  Act_SetViewOffset( Actor *self, float viewOffset );
+float Act_GetViewOffset( Actor *self );
+
 PLVector3 Act_GetForward( const Actor *self );

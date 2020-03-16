@@ -5,22 +5,57 @@
 #include "yin.h"
 #include "act.h"
 
-#define PLAYER_MAX_VELOCITY 10.0f
+#define PLAYER_VIEW_OFFSET  75.0f
+
+#define PLAYER_TURN_SPEED    4.5f
+#define PLAYER_FORWARD_SPEED 10.0f
+#define PLAYER_MAX_VELOCITY  PLAYER_FORWARD_SPEED
+#define PLAYER_MIN_VELOCITY  0.5f
+
+void Player_Spawn( Actor *self ) {
+	Act_SetViewOffset( self, PLAYER_VIEW_OFFSET );
+}
 
 void Player_Tick( Actor *self, void *userData ) {
+	float nAngle = Act_GetAngle( self );
+	if ( Sys_GetInputState( YIN_INPUT_LEFT ) ) {
+		nAngle -= PLAYER_TURN_SPEED;
+	} else if ( Sys_GetInputState( YIN_INPUT_RIGHT ) ) {
+		nAngle += PLAYER_TURN_SPEED;
+	}
+	Act_SetAngle( self, nAngle );
+
+	float forwardVelocity = 0.0f;
+	if ( Sys_GetInputState( YIN_INPUT_UP ) ) {
+		forwardVelocity = 1.0f;
+	} else if ( Sys_GetInputState( YIN_INPUT_DOWN ) ) {
+		forwardVelocity = -1.0f;
+	}
+
 	PLVector3 curVelocity = Act_GetVelocity( self );
+	if ( curVelocity.x > 0.0f ) { curVelocity.x -= 0.5f; }
+	else if ( curVelocity.x < 0.0f ) { curVelocity.x += 0.5f; }
+	if ( curVelocity.z > 0.0f ) { curVelocity.z -= 0.5f; }
+	else if ( curVelocity.z < 0.0f ) { curVelocity.z += 0.5f; }
+
+	PLVector3 forward = Act_GetForward( self );
+	curVelocity.x -= -forwardVelocity * forward.z;
+	curVelocity.z += forwardVelocity * forward.x;
+
+	curVelocity.x = plClamp( -PLAYER_MAX_VELOCITY, curVelocity.x, PLAYER_MAX_VELOCITY );
+	curVelocity.z = plClamp( -PLAYER_MAX_VELOCITY, curVelocity.z, PLAYER_MAX_VELOCITY );
+
 	/* clamp the velocity as necessary */
-	if ( curVelocity.x < 2.0f && curVelocity.x > -2.0f ) {
+	if ( curVelocity.x < PLAYER_MIN_VELOCITY && curVelocity.x > -PLAYER_MIN_VELOCITY ) {
 		curVelocity.x = 0.0f;
-	} else if ( curVelocity.x > PLAYER_MAX_VELOCITY ) {
-		curVelocity.x = PLAYER_MAX_VELOCITY;
-	} else if ( curVelocity.x < -PLAYER_MAX_VELOCITY ) {
-		curVelocity.x = -PLAYER_MAX_VELOCITY;
+	}
+	if ( curVelocity.z < PLAYER_MIN_VELOCITY && curVelocity.z > -PLAYER_MIN_VELOCITY ) {
+		curVelocity.z = 0.0f;
 	}
 
 	PLVector3 curPosition = Act_GetPosition( self );
 	curPosition = plAddVector3( curPosition, curVelocity );
-
 	Act_SetPosition( self, &curPosition );
+
 	Act_SetVelocity( self, &curVelocity );
 }
