@@ -20,4 +20,3 @@ Actor *Gam_GetPlayer( void );
 void Gam_Initialize( void );
 void Gam_Shutdown( void );
 void Gam_Tick( void );
-void Gam_DisplayMap( void );

@@ -6,6 +6,7 @@
 #include "gfx.h"
 #include "game.h"
 #include "act.h"
+#include "map.h"
 
 static PLShaderProgram *shaderPrograms[MAX_SHADER_TYPES];
 
@@ -542,7 +543,7 @@ void Gfx_DisplayScene( void ) {
 	angle += 0.5f;
 	Gfx_DrawAxesPivot(PLVector3( 0, 0, 0 ), PLVector3( 0, angle, 0 ) );
 
-	Gam_DisplayMap();
+	Map_Draw();
 	Act_DisplayActors();
 }
 
