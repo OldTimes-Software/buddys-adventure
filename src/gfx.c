@@ -491,6 +491,8 @@ void Gfx_DisplayMenu( void ) {
 					YIN_DISPLAY_HEIGHT - gunHeight,
 					gunWidth, gunHeight,
 					testSprite );
+
+			Gfx_DrawNumber( 16, 16, 128 );
 			break;
 	}
 }
