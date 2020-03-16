@@ -34,12 +34,13 @@ typedef struct MapLine {
 } MapLine;
 
 typedef struct MapArea {
-	unsigned int numAreas;
 	uint32_t unknown0;
 	uint16_t unused0;
 	uint16_t unused1;
 	unsigned int numLines;
 	unsigned int *lineIndices;
+	PLVector2    max; /* boundary maximum */
+	PLVector2    min; /* boundary minimum */
 } MapArea;
 
 struct {
@@ -137,16 +138,40 @@ void Gam_LoadMapAreas( void ) {
 
 	bool status;
 	mapData.numAreas = plReadInt32( filePtr, false, &status );
-	mapData.areas = malloc( sizeof( MapArea ) * mapData.numAreas );
+	mapData.areas = calloc( mapData.numAreas, sizeof( MapArea ) );
 	for ( unsigned int i = 0; i < mapData.numAreas; ++i ) {
-		mapData.areas[ i ].unknown0 = plReadInt32( filePtr, false, &status );
-		mapData.areas[ i ].unused0 = plReadInt16( filePtr, false, &status );
-		mapData.areas[ i ].unused1 = plReadInt16( filePtr, false, &status );
-		mapData.areas[ i ].numLines = plReadInt16( filePtr, false, &status );
+		MapArea *area = &mapData.areas[ i ];
+		area->unknown0 = plReadInt32( filePtr, false, &status );
+		area->unused0 = plReadInt16( filePtr, false, &status );
+		area->unused1 = plReadInt16( filePtr, false, &status );
+		area->numLines = plReadInt16( filePtr, false, &status );
 
-		mapData.areas[ i ].lineIndices = malloc( sizeof( unsigned int ) * mapData.areas[ i ].numLines );
+		/* generate a list of all our line indices */
+		area->lineIndices = malloc( sizeof( unsigned int ) * mapData.areas[ i ].numLines );
 		for ( unsigned int j = 0; j < mapData.areas[ i ].numLines; ++j ) {
 			mapData.areas[ i ].lineIndices[ j ] = plReadInt16( filePtr, false, &status );
+
+			/* calculate the area bounds */
+			const MapPoint *points[ 2 ];
+			points[ 0 ] = &mapData.points[ mapData.lines[ area->lineIndices[ j ] ].startVertex ];
+			points[ 1 ] = &mapData.points[ mapData.lines[ area->lineIndices[ j ] ].endVertex ];
+			for ( unsigned int k = 0; k < 2; ++k ) {
+				if ( points[ k ]->x > area->max.x ) {
+					area->max.x = points[ k ]->x;
+				}
+
+				if ( points[ k ]->y > area->max.y ) {
+					area->max.y = points[ k ]->y;
+				}
+
+				if ( points[ k ]->x < area->min.x ) {
+					area->min.x = points[ k ]->x;
+				}
+
+				if ( points[ k ]->y < area->min.y ) {
+					area->min.y = points[ k ]->y;
+				}
+			}
 		}
 	}
 
@@ -180,6 +205,25 @@ void Gam_DisplayMap( void ) {
 					texture
 			);
 		}
+
+		/* draw the ceiling and floor */
+
+		plDrawTexturedQuad(
+				&PLVector3( area->max.x, 0.0f, area->max.y ),
+				&PLVector3( area->min.x, 0.0f, area->max.y ),
+				&PLVector3( area->max.x, 0.0f, area->min.y ),
+				&PLVector3( area->min.x, 0.0f, area->min.y ),
+				2, 2,
+				Gfx_GetFloorTexture( 0 )
+		);
+		plDrawTexturedQuad(
+				&PLVector3( area->max.x, 128.0f, area->max.y ),
+				&PLVector3( area->min.x, 128.0f, area->max.y ),
+				&PLVector3( area->max.x, 128.0f, area->min.y ),
+				&PLVector3( area->min.x, 128.0f, area->min.y ),
+				2, 2,
+				Gfx_GetFloorTexture( 1 )
+		);
 	}
 }
 

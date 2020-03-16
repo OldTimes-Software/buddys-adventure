@@ -30,6 +30,8 @@ static unsigned int numWallTextures;
 static PLTexture **floorTextures;
 static unsigned int numFloorTextures;
 
+static PLTexture *testSprite;
+
 PLTexture *Gfx_GenerateTextureFromData( uint8_t *data, unsigned int w, unsigned int h, unsigned int numChannels,
 										bool generateMipMap ) {
 	PLColourFormat cFormat;
@@ -111,7 +113,7 @@ PLTexture *Gfx_LoadPictureByIndex( const RGBMap *palette, unsigned int index ) {
 		return fallbackTexture;
 	}
 
-	PLColour *colourBuffer = malloc( sizeof( PLColour ) * ( w * h ) );
+	PLColour *colourBuffer = calloc( w * h, sizeof( PLColour ) );
 	for ( unsigned int i = 0; i < w; ++i ) {
 		plFileSeek( filePtr, columnOffsets[ i ], PL_SEEK_SET );
 
@@ -187,6 +189,55 @@ void Gfx_LoadWallTextures( void ) {
 	}
 }
 
+PLTexture *Gfx_LoadFlatByIndex( const RGBMap *palette, unsigned int index ) {
+	PLFile *filePtr = plLoadPackageFileByIndex( globalWad, index );
+	if ( filePtr == NULL ) {
+		PrintWarn( "Failed to load flat %d!\nPL: %s\n", index, plGetError() );
+		return fallbackTexture;
+	}
+
+	/* all flats are assumed to be 64x64, which is a shit limitation, but
+	 * we should respect that */
+	size_t flatSize = plGetFileSize( filePtr );
+	if ( flatSize != 4096 ) {
+		PrintWarn( "Unexpected flat size for %d, %d/64!\n", index, flatSize );
+		plCloseFile( filePtr );
+		return fallbackTexture;
+	}
+
+	PLColour *colourBuffer = malloc( sizeof( PLColour ) * 4096 );
+	for ( unsigned int i = 0; i < 4096; ++i ) {
+		bool status;
+		uint8_t pixel = plReadInt8( filePtr, &status );
+		if ( !status ) {
+			PrintError( "Failed to read pixel %d for flat %d!\nPL: %s\n", i, index, plGetError() );
+		}
+
+		colourBuffer[ i ].r = palette[ pixel ].r;
+		colourBuffer[ i ].g = palette[ pixel ].g;
+		colourBuffer[ i ].b = palette[ pixel ].b;
+		/* transparency isn't supported here? */
+		colourBuffer[ i ].a = 255;
+	}
+
+	plCloseFile( filePtr );
+
+	PLTexture *texture = Gfx_GenerateTextureFromData(( uint8_t * ) colourBuffer, 64, 64, 4, false );
+
+	free( colourBuffer );
+
+	return texture;
+}
+
+PLTexture *Gfx_GetFloorTexture( unsigned int index ) {
+	if ( index >= numFloorTextures ) {
+		PrintWarn( "Invalid floor texture slot (%d/%d)!\n", index, numFloorTextures );
+		return fallbackTexture;
+	}
+
+	return floorTextures[ index ];
+}
+
 void Gfx_LoadFloorTextures( void ) {
 	unsigned int posStart = plGetPackageTableIndex( globalWad, "F_START" );
 	if ( plGetFunctionResult() != PL_RESULT_SUCCESS ) {
@@ -203,7 +254,7 @@ void Gfx_LoadFloorTextures( void ) {
 
 	for ( unsigned int i = 0; i < numFloorTextures; ++i ) {
 		unsigned int fileIndex = posStart + ( i + 1 );
-		floorTextures[ i ] = Gfx_LoadPictureByIndex( playPal, fileIndex );
+		floorTextures[ i ] = Gfx_LoadFlatByIndex( playPal, fileIndex );
 	}
 }
 
@@ -404,7 +455,9 @@ void Gfx_Initialize( void ) {
 #endif
 
 	Gfx_LoadWallTextures();
-	//Gfx_LoadFloorTextures();
+	Gfx_LoadFloorTextures();
+
+	testSprite = Gfx_LoadPictureByName( playPal, "PSHOA0" );
 
 	plSetDepthBufferMode( PL_DEPTHBUFFER_ENABLE );
 	plSetDepthMask( true );
@@ -429,7 +482,15 @@ void Gfx_DisplayMenu( void ) {
 
 		case MENU_STATE_HUD:
 			Gfx_EnableShaderProgram( SHADER_ALPHA_TEST );
-			plDrawTexturedRectangle( 0, 0, YIN_DISPLAY_WIDTH, YIN_DISPLAY_HEIGHT, playScrnTexture );
+			//plDrawTexturedRectangle( 0, 0, YIN_DISPLAY_WIDTH, YIN_DISPLAY_HEIGHT, playScrnTexture );
+
+			int gunWidth = 320 / 1.5;
+			int gunHeight = 200 / 1.5;
+			plDrawTexturedRectangle(
+					YIN_DISPLAY_WIDTH / 2 - ( gunWidth / 2 ),
+					YIN_DISPLAY_HEIGHT - gunHeight,
+					gunWidth, gunHeight,
+					testSprite );
 			break;
 	}
 }

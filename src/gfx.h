@@ -20,3 +20,4 @@ void Gfx_EnableShaderProgram( ShaderType type );
 void Gfx_DrawAxesPivot( PLVector3 position, PLVector3 rotation );
 
 PLTexture *Gfx_GetWallTexture( unsigned int index );
+PLTexture *Gfx_GetFloorTexture( unsigned int index );

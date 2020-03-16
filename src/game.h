@@ -9,7 +9,7 @@ typedef enum MenuState {
 	MENU_STATE_HUD,   /* hud/overlay mode */
 } MenuState;
 
-#define PLAYER_VIEW_OFFSET  64.0f
+#define PLAYER_VIEW_OFFSET  75.0f
 #define PLAYER_MAX_VELOCITY 10.0f
 
 MenuState Gam_GetMenuState( void );
