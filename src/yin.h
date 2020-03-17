@@ -69,4 +69,6 @@ extern PLPackage *globalWad;
 
 bool Sys_GetInputState( InputButton inputIndex );
 
+void *Sys_AllocateMemory( size_t num, size_t size );
+
 unsigned int Sys_GetNumTicks( void );

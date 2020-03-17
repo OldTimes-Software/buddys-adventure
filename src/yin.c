@@ -13,6 +13,15 @@ PLPackage *globalWad = NULL;
 
 unsigned int numTicks = 0;
 
+void *Sys_AllocateMemory( size_t num, size_t size ) {
+	void *mem = calloc( num, size );
+	if( mem == NULL ) {
+		PrintError( "Failed to allocate %d bytes!\n", num * size );
+	}
+
+	return mem;
+}
+
 static void Sys_Close( void ) {
 	Act_Shutdown();
 	Gam_Shutdown();

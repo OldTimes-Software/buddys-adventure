@@ -35,6 +35,7 @@ typedef struct Actor {
 	PLVector3        velocity;
 	float            angle;
 	float            viewOffset;
+	unsigned int     curArea;
 	ActorType        type;
 	ActorSetup       setup;
 	PLLinkedListNode *node;
@@ -44,7 +45,7 @@ typedef struct Actor {
 PLLinkedList *actorList;
 
 Actor *Act_SpawnActor( ActorType type, PLVector3 position, float angle ) {
-	Actor *actor = calloc( 1, sizeof( Actor ));
+	Actor *actor = Sys_AllocateMemory( 1, sizeof( Actor ) );
 	actor->node = plInsertLinkedListNode( actorList, actor );
 	actor->setup = actorSpawnSetup[ type ];
 	actor->position = position;

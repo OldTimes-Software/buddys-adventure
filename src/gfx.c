@@ -114,7 +114,7 @@ PLTexture *Gfx_LoadPictureByIndex( const RGBMap *palette, unsigned int index ) {
 		return fallbackTexture;
 	}
 
-	PLColour *colourBuffer = calloc( w * h, sizeof( PLColour ) );
+	PLColour *colourBuffer = Sys_AllocateMemory( w * h, sizeof( PLColour ) );
 	for ( unsigned int i = 0; i < w; ++i ) {
 		plFileSeek( filePtr, columnOffsets[ i ], PL_SEEK_SET );
 
@@ -182,7 +182,7 @@ void Gfx_LoadWallTextures( void ) {
 	}
 
 	numWallTextures = posEnd - posStart;
-	wallTextures = calloc( numWallTextures, sizeof( PLTexture* ) );
+	wallTextures = Sys_AllocateMemory( numWallTextures, sizeof( PLTexture* ) );
 
 	for ( unsigned int i = 0; i < numWallTextures; ++i ) {
 		unsigned int fileIndex = posStart + ( i + 1 );
@@ -251,7 +251,7 @@ void Gfx_LoadFloorTextures( void ) {
 	}
 
 	numFloorTextures = posEnd - posStart;
-	floorTextures = calloc( numFloorTextures, sizeof( PLTexture* ) );
+	floorTextures = Sys_AllocateMemory( numFloorTextures, sizeof( PLTexture* ) );
 
 	for ( unsigned int i = 0; i < numFloorTextures; ++i ) {
 		unsigned int fileIndex = posStart + ( i + 1 );

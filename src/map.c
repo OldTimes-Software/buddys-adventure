@@ -73,7 +73,7 @@ void Map_LoadAreas( PLPackage *wad ) {
 
 	bool status;
 	mapData.numAreas = plReadInt32( filePtr, false, &status );
-	mapData.areas = calloc( mapData.numAreas, sizeof( MapArea ) );
+	mapData.areas = Sys_AllocateMemory( mapData.numAreas, sizeof( MapArea ) );
 	for ( unsigned int i = 0; i < mapData.numAreas; ++i ) {
 		MapArea *area = &mapData.areas[ i ];
 		area->unknown0 = plReadInt32( filePtr, false, &status );
@@ -82,7 +82,7 @@ void Map_LoadAreas( PLPackage *wad ) {
 		area->numLines = plReadInt16( filePtr, false, &status );
 
 		/* generate a list of all our line indices */
-		area->lineIndices = malloc( sizeof( unsigned int ) * mapData.areas[ i ].numLines );
+		area->lineIndices = Sys_AllocateMemory( mapData.areas[ i ].numLines, sizeof( unsigned int ) );
 
 		area->max.x = area->max.y = -9999.0f;
 		area->min.x = area->min.y = 9999.0f;
