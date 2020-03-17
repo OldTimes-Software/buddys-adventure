@@ -22,6 +22,11 @@ void *Sys_AllocateMemory( size_t num, size_t size ) {
 	return mem;
 }
 
+/* wrapper for malloc */
+static void Sys_malloc( size_t size ) {
+	return Sys_AllocateMemory( 1, size );
+}
+
 static void Sys_Close( void ) {
 	Act_Shutdown();
 	Gam_Shutdown();
@@ -99,6 +104,9 @@ unsigned int Sys_GetNumTicks( void ) {
 }
 
 int Sys_Init( int argc, char **argv ) {
+	pl_calloc = Sys_AllocateMemory;
+	pl_malloc = Sys_malloc;
+
 	/* initialize the platform library */
 	plInitialize( argc, argv );
 	plInitializeSubSystems( PL_SUBSYSTEM_GRAPHICS | PL_SUBSYSTEM_IO | PL_SUBSYSTEM_IMAGE );
