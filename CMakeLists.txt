@@ -17,7 +17,7 @@ file( GLOB YIN_SOURCE_FILES
         src/*.c
         src/*.h )
 
-add_executable( Yin ${YIN_SOURCE_FILES} )
+add_executable( Yin WIN32 ${YIN_SOURCE_FILES} )
 
 target_link_libraries( Yin platform freeglut_static )
 target_include_directories( Yin PRIVATE src/3rdparty/freeglut/freeglut/freeglut/include/ )

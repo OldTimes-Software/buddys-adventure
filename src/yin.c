@@ -89,7 +89,7 @@ unsigned int Sys_GetNumTicks( void ) {
 	return numTicks;
 }
 
-int main( int argc, char **argv ) {
+int Sys_Init( int argc, char **argv ) {
 	/* initialize the platform library */
 	plInitialize( argc, argv );
 	plInitializeSubSystems( PL_SUBSYSTEM_GRAPHICS | PL_SUBSYSTEM_IO | PL_SUBSYSTEM_IMAGE );
@@ -108,8 +108,9 @@ int main( int argc, char **argv ) {
 
 	/* ensure our wad is available */
 	globalWad = plLoadPackage( YIN_GLOBAL_WAD );
-	if ( globalWad == NULL ) {
+	if( globalWad == NULL ) {
 		PrintError( "Failed to load \"" YIN_GLOBAL_WAD "\"!\nPL: %s\n", plGetError() );
+		return EXIT_FAILURE;
 	}
 
 	glutInitWindowSize( YIN_WINDOW_WIDTH, YIN_WINDOW_HEIGHT );
@@ -138,3 +139,32 @@ int main( int argc, char **argv ) {
 
 	return EXIT_SUCCESS;
 }
+
+#if defined( _WIN32 )
+
+#include <Windows.h>
+#include <shellapi.h>
+
+int WinMain(
+	HINSTANCE hInstance,
+	HINSTANCE hPrevInstance,
+	LPSTR     lpCmdLine,
+	int       nShowCmd
+) {
+	int numArguments;
+	LPWSTR* strArgs = CommandLineToArgvW( lpCmdLine, &numArguments );
+	if( strArgs == NULL ) {
+		printf( "Failed to get command line arguments from Win32 API!\n" );
+		return EXIT_FAILURE;
+	}
+
+	return Sys_Init( numArguments, strArgs );
+}
+
+#else
+
+int main( int argc, char **argv ) {
+	return Sys_Init( argc, argv );
+}
+
+#endif
