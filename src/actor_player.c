@@ -39,8 +39,11 @@ void Player_Tick( Actor *self, void *userData ) {
 	else if ( curVelocity.z < 0.0f ) { curVelocity.z += 0.5f; }
 
 	PLVector3 forward = Act_GetForward( self );
-	curVelocity.x -= -forwardVelocity * forward.z;
-	curVelocity.z += forwardVelocity * forward.x;
+	if( forwardVelocity > 0 ) {
+		curVelocity = plAddVector3( curVelocity, plScaleVector3f( forward, forwardVelocity ) );
+	} else if ( forwardVelocity < 0 ) {
+		curVelocity = plSubtractVector3( curVelocity, plScaleVector3f( forward, forwardVelocity ) );
+	}
 
 	curVelocity.x = plClamp( -PLAYER_MAX_VELOCITY, curVelocity.x, PLAYER_MAX_VELOCITY );
 	curVelocity.z = plClamp( -PLAYER_MAX_VELOCITY, curVelocity.z, PLAYER_MAX_VELOCITY );
@@ -53,9 +56,11 @@ void Player_Tick( Actor *self, void *userData ) {
 		curVelocity.z = 0.0f;
 	}
 
+	PrintMsg( "V: %s\n", plPrintVector3( &curVelocity, pl_int_var ) );
+
 	PLVector3 curPosition = Act_GetPosition( self );
 	curPosition = plAddVector3( curPosition, curVelocity );
-	Act_SetPosition( self, &curPosition );
 
+	Act_SetPosition( self, &curPosition );
 	Act_SetVelocity( self, &curVelocity );
 }

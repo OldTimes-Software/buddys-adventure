@@ -83,24 +83,9 @@ void      Act_SetViewOffset( Actor *self, float viewOffset ) { self->viewOffset 
 float     Act_GetViewOffset( Actor *self ) { return self->viewOffset; }
 
 PLVector3 Act_GetForward( const Actor *self ) {
-#if 0 /* this doesn't work... */
 	PLVector3 forward;
 	plAnglesAxes( PLVector3( 0, self->angle, 0 ), NULL, NULL, &forward );
 	return forward;
-#else
-	float angle = plDegreesToRadians( self->angle );
-	float s = sinf( angle );
-	float c = cosf( angle );
-
-	PLVector3 right;
-	plAnglesAxes( PLVector3( 0, angle, 0 ), &right, NULL, NULL );
-
-	return PLVector3(
-			right.x * c - right.y * s,
-			right.x * s + right.y * c,
-			0.0f
-			);
-#endif
 }
 
 void Act_SpawnActors( void ) {

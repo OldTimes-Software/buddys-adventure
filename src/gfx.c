@@ -529,9 +529,9 @@ void Gfx_DisplayScene( void ) {
 	PLVector3 velocity = Act_GetVelocity( player );
 	float velocityVector = plVector3Length( &velocity );
 	static float viewBob;
-	viewBob += ( sinf( Sys_GetNumTicks() * 150.0f ) / 10.0f ) * velocityVector;
+	viewBob += ( sinf( Sys_GetNumTicks() * 100.0f ) / 100.0f ) * velocityVector;
 
-	playerCamera->position.y += Act_GetViewOffset( player ) + viewBob;
+	playerCamera->position.y = Act_GetViewOffset( player ) + viewBob;
 
 	Gfx_EnableShaderProgram( SHADER_GENERIC );
 
