@@ -472,6 +472,7 @@ void Gfx_Shutdown( void ) {
 void Gfx_DisplayMenu( void ) {
 	plSetupCamera( auxCamera );
 
+#ifndef DEBUG_CAM
 	switch ( Gam_GetMenuState()) {
 		default:
 		PrintError( "Invalid menu state!\n" );
@@ -496,6 +497,7 @@ void Gfx_DisplayMenu( void ) {
 			Gfx_DrawNumber( 16, 16, 128 );
 			break;
 	}
+#endif
 }
 
 void Gfx_DrawAxesPivot( PLVector3 position, PLVector3 rotation ) {
@@ -522,6 +524,12 @@ void Gfx_DisplayScene( void ) {
 		return;
 	}
 
+#ifdef DEBUG_CAM
+	playerCamera->position = Act_GetPosition( player );
+	playerCamera->position.y = 512;
+	playerCamera->angles.x = -85;
+	playerCamera->angles.y = Act_GetAngle( player );
+#else
 	playerCamera->angles.y = Act_GetAngle( player );
 	playerCamera->position = Act_GetPosition( player );
 
@@ -532,22 +540,22 @@ void Gfx_DisplayScene( void ) {
 	viewBob += ( sinf( Sys_GetNumTicks() * 100.0f ) / 100.0f ) * velocityVector;
 
 	playerCamera->position.y = Act_GetViewOffset( player ) + viewBob;
+#endif
 
 	Gfx_EnableShaderProgram( SHADER_GENERIC );
 
 	plSetupCamera( playerCamera );
 
-#if 0
-	PLMatrix4 transform;
+#ifdef DEBUG_CAM
+	PLMatrix4 mat = plMatrix4Identity();
 
-	transform = plMultiplyMatrix4( plMatrix4Identity(),
-								   plRotateMatrix4( plDegreesToRadians( 90.0f ), PLVector3( 1.0f, 0.0f, 0.0f ) ));
-	plDrawGrid( &transform, -1024, -1024, 4096, 4096, 32 );
+	PLVector3 startPos = Act_GetPosition( player );
+	startPos.y += Act_GetViewOffset( player );
 
-	transform = plMultiplyMatrix4( plMatrix4Identity(),
-								   plRotateMatrix4( plDegreesToRadians( 90.0f ), PLVector3( 1.0f, 0.0f, 0.0f ) ));
-	transform = plMultiplyMatrix4( transform, plTranslateMatrix4(PLVector3( 0, 128, 0 ) ));
-	plDrawGrid( &transform, -1024, -1024, 4096, 4096, 32 );
+	PLVector3 forward = Act_GetForward( player );
+	PLVector3 endPos = plAddVector3( startPos, plScaleVector3f( forward, 2048.0f ) );
+
+	plDrawLine( &mat, &startPos, &PLColour( 0, 255, 0, 255 ), &endPos, &PLColour( 255, 0, 0, 255 ) );
 #endif
 
 	static float angle = 0;
@@ -559,34 +567,8 @@ void Gfx_DisplayScene( void ) {
 }
 
 void Gfx_Display( void ) {
-	//plBindFrameBuffer( scaleBuffer, PL_FRAMEBUFFER_DRAW );
-
-	//unsigned int bufferWidth, bufferHeight;
-	//plGetFrameBufferResolution( scaleBuffer, &bufferWidth, &bufferHeight );
-	//auxCamera->viewport.w = bufferWidth;
-	//auxCamera->viewport.h = bufferHeight;
-
 	plClearBuffers( PL_BUFFER_DEPTH | PL_BUFFER_COLOUR );
 
 	Gfx_DisplayScene();
 	Gfx_DisplayMenu();
-
-#ifdef DEBUG_PAL
-	plDrawTexturedRectangle( 16, 16, 32, 32, fallbackTexture );
-	plDrawTexturedRectangle( 16, 64, 32, 32, playPalTexture );
-	plDrawTexturedRectangle( 48, 64, 32, 32, titlePalTexture );
-#endif
-
-#if 0
-	plBindFrameBuffer( NULL, PL_FRAMEBUFFER_DRAW );
-
-	auxCamera->viewport.w = YIN_WINDOW_WIDTH;
-	auxCamera->viewport.h = YIN_WINDOW_HEIGHT;
-
-	plSetupCamera( auxCamera );
-
-	Gfx_EnableShaderProgram( SHADER_TEXTURE );
-
-	plDrawTexturedRectangle( 0, 0, YIN_WINDOW_WIDTH, YIN_WINDOW_HEIGHT, scaleBufferTexture );
-#endif
 }

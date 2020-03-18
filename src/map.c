@@ -28,7 +28,7 @@ static void Map_LoadPoints( PLPackage *wad ) {
 
 	bool status;
 	mapData.numPoints = plReadInt32( filePtr, false, &status );
-	mapData.points = malloc( sizeof( MapPoint ) * mapData.numPoints );
+	mapData.points = Sys_AllocateMemory( mapData.numPoints, sizeof( MapPoint ) );
 	for ( unsigned int i = 0; i < mapData.numPoints; ++i ) {
 		/* flipped so they match up with what we need */
 		mapData.points[ i ].y = ( int16_t ) ( plReadInt32( filePtr, false, &status ) >> 16 ) * 2;
@@ -46,7 +46,11 @@ static void Map_LoadLines( PLPackage *wad ) {
 
 	bool status;
 	mapData.numLines = plReadInt32( filePtr, false, &status );
-	mapData.lines = malloc( sizeof( MapLine ) * mapData.numLines );
+	if( mapData.numLines == 0 ) {
+		PrintError( "Invalid line count provided in WAD!\nPL: %s\n", plGetError() );
+	}
+
+	mapData.lines = Sys_AllocateMemory( mapData.numLines, sizeof( MapLine ) );
 	for ( unsigned int i = 0; i < mapData.numLines; ++i ) {
 		mapData.lines[ i ].startVertex  = plReadInt16( filePtr, false, &status );
 		mapData.lines[ i ].endVertex    = plReadInt16( filePtr, false, &status );
@@ -54,12 +58,14 @@ static void Map_LoadLines( PLPackage *wad ) {
 		mapData.lines[ i ].unknown0     = plReadInt16( filePtr, false, &status );
 		mapData.lines[ i ].colSomething = plReadInt16( filePtr, false, &status );
 		mapData.lines[ i ].unknown1     = plReadInt8( filePtr, &status );
-		mapData.lines[ i ].hScale     = plReadInt8( filePtr, &status );
+		mapData.lines[ i ].hScale       = plReadInt8( filePtr, &status );
 		mapData.lines[ i ].unknown2     = plReadInt16( filePtr, false, &status );
 		mapData.lines[ i ].unknown3     = plReadInt32( filePtr, false, &status );
 		mapData.lines[ i ].unknown4     = plReadInt16( filePtr, false, &status );
+	}
 
-		printf( "%d %d\n", mapData.lines[ i ].startVertex, mapData.lines[ i ].endVertex );
+	if( !status ) {
+		PrintError( "Failed to load line data from WAD!\nPL: %s\n", plGetError() );
 	}
 
 	plCloseFile( filePtr );
@@ -77,15 +83,15 @@ void Map_LoadAreas( PLPackage *wad ) {
 	for ( unsigned int i = 0; i < mapData.numAreas; ++i ) {
 		MapArea *area = &mapData.areas[ i ];
 		area->unknown0 = plReadInt32( filePtr, false, &status );
-		area->unused0 = plReadInt16( filePtr, false, &status );
-		area->unused1 = plReadInt16( filePtr, false, &status );
+		area->unused0  = plReadInt16( filePtr, false, &status );
+		area->unused1  = plReadInt16( filePtr, false, &status );
 		area->numLines = plReadInt16( filePtr, false, &status );
 
 		/* generate a list of all our line indices */
 		area->lineIndices = Sys_AllocateMemory( mapData.areas[ i ].numLines, sizeof( unsigned int ) );
 
-		area->max.x = area->max.y = -9999.0f;
-		area->min.x = area->min.y = 9999.0f;
+		area->max[ 0 ] = area->max[ 1 ] = INT_MIN;
+		area->min[ 0 ] = area->min[ 1 ] = INT_MAX;
 
 		for ( unsigned int j = 0; j < mapData.areas[ i ].numLines; ++j ) {
 			mapData.areas[ i ].lineIndices[ j ] = plReadInt16( filePtr, false, &status );
@@ -96,20 +102,20 @@ void Map_LoadAreas( PLPackage *wad ) {
 			points[ 1 ] = &mapData.points[ mapData.lines[ area->lineIndices[ j ] ].endVertex ];
 
 			for ( unsigned int k = 0; k < 2; ++k ) {
-				if ( points[ k ]->x > area->max.x ) {
-					area->max.x = points[ k ]->x;
+				if ( points[ k ]->x > area->max[ 0 ] ) {
+					area->max[ 0 ] = points[ k ]->x;
 				}
 
-				if ( points[ k ]->y > area->max.y ) {
-					area->max.y = points[ k ]->y;
+				if ( points[ k ]->y > area->max[ 1 ] ) {
+					area->max[ 1 ] = points[ k ]->y;
 				}
 
-				if ( points[ k ]->x < area->min.x ) {
-					area->min.x = points[ k ]->x;
+				if ( points[ k ]->x < area->min[ 0 ] ) {
+					area->min[ 0 ] = points[ k ]->x;
 				}
 
-				if ( points[ k ]->y < area->min.y ) {
-					area->min.y = points[ k ]->y;
+				if ( points[ k ]->y < area->min[ 1 ] ) {
+					area->min[ 1 ] = points[ k ]->y;
 				}
 			}
 		}
@@ -149,20 +155,22 @@ void Map_Draw( void ) {
 		/* draw the ceiling and floor */
 
 		plDrawTexturedQuad(
-				&PLVector3( area->max.x, 0.0f, area->max.y ),
-				&PLVector3( area->min.x, 0.0f, area->max.y ),
-				&PLVector3( area->max.x, 0.0f, area->min.y ),
-				&PLVector3( area->min.x, 0.0f, area->min.y ),
+				&PLVector3( area->max[ 0 ], 0.0f, area->max[ 1 ] ),
+				&PLVector3( area->min[ 0 ], 0.0f, area->max[ 1 ] ),
+				&PLVector3( area->max[ 0 ], 0.0f, area->min[ 1 ] ),
+				&PLVector3( area->min[ 0 ], 0.0f, area->min[ 1 ] ),
 				2, 2,
 				Gfx_GetFloorTexture( 0 )
 		);
+#ifndef DEBUG_CAM
 		plDrawTexturedQuad(
-				&PLVector3( area->max.x, 128.0f, area->max.y ),
-				&PLVector3( area->min.x, 128.0f, area->max.y ),
-				&PLVector3( area->max.x, 128.0f, area->min.y ),
-				&PLVector3( area->min.x, 128.0f, area->min.y ),
+				&PLVector3( area->max[ 0 ], 128.0f, area->max[ 1 ] ),
+				&PLVector3( area->min[ 0 ], 128.0f, area->max[ 1 ] ),
+				&PLVector3( area->max[ 0 ], 128.0f, area->min[ 1 ] ),
+				&PLVector3( area->min[ 0 ], 128.0f, area->min[ 1 ] ),
 				2, 2,
 				Gfx_GetFloorTexture( 1 )
 		);
+#endif
 	}
 }

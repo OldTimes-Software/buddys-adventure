@@ -24,7 +24,7 @@ void Player_Tick( Actor *self, void *userData );
 
 ActorSetup actorSpawnSetup[ MAX_ACTOR_TYPES ] = {
 		[ ACTOR_NONE   ] = { NULL, NULL, NULL, NULL },
-		[ ACTOR_PLAYER ] = { Player_Spawn, Player_Tick, NULL, NULL },
+		[ ACTOR_PLAYER ] = { Player_Spawn, Player_Tick, Act_DrawBasic, NULL },
 		[ ACTOR_BOSS   ] = { NULL, NULL, Act_DrawBasic, NULL },
 		[ ACTOR_SARG   ] = { NULL, NULL, Act_DrawBasic, NULL },
 		[ ACTOR_TROO   ] = { NULL, NULL, Act_DrawBasic, NULL },
@@ -33,6 +33,7 @@ ActorSetup actorSpawnSetup[ MAX_ACTOR_TYPES ] = {
 typedef struct Actor {
 	PLVector3        position;
 	PLVector3        velocity;
+	int              health;
 	float            angle;
 	float            viewOffset;
 	unsigned int     curArea;
@@ -46,18 +47,14 @@ PLLinkedList *actorList;
 
 Actor *Act_SpawnActor( ActorType type, PLVector3 position, float angle ) {
 	Actor *actor = Sys_AllocateMemory( 1, sizeof( Actor ) );
-	actor->node = plInsertLinkedListNode( actorList, actor );
-	actor->setup = actorSpawnSetup[ type ];
+	actor->node     = plInsertLinkedListNode( actorList, actor );
+	actor->setup    = actorSpawnSetup[ type ];
 	actor->position = position;
-	actor->angle = angle;
+	actor->angle    = angle;
 
 	if ( actor->setup.Spawn != NULL ) {
 		actor->setup.Spawn( actor );
 	}
-
-	PrintMsg( "Actor has spawned!\n"
-			  "xPos: %d\nyPos: %d\ntype: %d\nflags: %d\n",
-			  (int) actor->position.x, (int) actor->position.z, type );
 
 	return actor;
 }
@@ -170,4 +167,3 @@ void Act_Initialize( void ) {
 void Act_Shutdown( void ) {
 	plDestroyLinkedList( actorList );
 }
-

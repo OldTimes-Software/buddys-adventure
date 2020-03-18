@@ -22,13 +22,13 @@ typedef struct MapLine {
 } MapLine;
 
 typedef struct MapArea {
-	uint32_t unknown0;
-	uint16_t unused0;
-	uint16_t unused1;
+	uint32_t     unknown0;
+	uint16_t     unused0;
+	uint16_t     unused1;
 	unsigned int numLines;
 	unsigned int *lineIndices;
-	PLVector2    max; /* boundary maximum */
-	PLVector2    min; /* boundary minimum */
+	int          max[ 2 ]; /* boundary maximum */
+	int          min[ 2 ]; /* boundary minimum */
 } MapArea;
 
 void Map_Load( PLPackage *wad );
