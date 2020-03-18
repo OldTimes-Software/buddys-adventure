@@ -528,7 +528,7 @@ void Gfx_DisplayScene( void ) {
 	playerCamera->position = Act_GetPosition( player );
 	playerCamera->position.y = 512;
 	playerCamera->angles.x = -85;
-	playerCamera->angles.y = Act_GetAngle( player );
+	playerCamera->angles.y = -Act_GetAngle( player ) + 90.0f;
 #else
 	playerCamera->angles.y = Act_GetAngle( player );
 	playerCamera->position = Act_GetPosition( player );
@@ -549,18 +549,22 @@ void Gfx_DisplayScene( void ) {
 #ifdef DEBUG_CAM
 	PLMatrix4 mat = plMatrix4Identity();
 
+	PLVector3 forward, left;
+	plAnglesAxes( PLVector3( 0, Act_GetAngle( player ), 0 ), &left, NULL, &forward );
+
 	PLVector3 startPos = Act_GetPosition( player );
 	startPos.y += Act_GetViewOffset( player );
+	PLVector3 endPos = plAddVector3( startPos, plScaleVector3f( forward, 512.0f ) );
+	plDrawLine( &mat, &startPos, &PLColour( 0, 0, 255, 255 ), &endPos, &PLColour( 0, 0, 255, 255 ) );
 
-	PLVector3 forward = Act_GetForward( player );
-	PLVector3 endPos = plAddVector3( startPos, plScaleVector3f( forward, 2048.0f ) );
+	startPos = endPos;
+	endPos = plAddVector3( startPos, plScaleVector3f( left, 512.0f ) );
+	plDrawLine( &mat, &startPos, &PLColour( 0, 0, 255, 255 ), &endPos, &PLColour( 255, 0, 0, 255 ) );
 
-	plDrawLine( &mat, &startPos, &PLColour( 0, 255, 0, 255 ), &endPos, &PLColour( 255, 0, 0, 255 ) );
+	endPos = plSubtractVector3( startPos, plScaleVector3f( left, 512.0f ) );
+	plDrawLine( &mat, &startPos, &PLColour( 0, 0, 255, 255 ), &endPos, &PLColour( 255, 0, 0, 255 ) );
+
 #endif
-
-	static float angle = 0;
-	angle += 0.5f;
-	Gfx_DrawAxesPivot(PLVector3( 0, 0, 0 ), PLVector3( 0, angle, 0 ) );
 
 	Map_Draw();
 	Act_DisplayActors();

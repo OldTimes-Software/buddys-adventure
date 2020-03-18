@@ -5,6 +5,8 @@
 #include "yin.h"
 #include "map.h"
 #include "gfx.h"
+#include "act.h"
+#include "game.h"
 
 static struct {
 	MapArea      *areas;
@@ -131,6 +133,12 @@ void Map_Load( PLPackage *wad ) {
 }
 
 void Map_Draw( void ) {
+	/* fetch the local player so we can perform vis testing */
+	Actor *player = Gam_GetPlayer();
+	if ( player == NULL ) {
+		return;
+	}
+
 	Gfx_EnableShaderProgram( SHADER_LIT );
 
 	for ( unsigned int i = 0; i < mapData.numAreas; ++i ) {
@@ -138,6 +146,13 @@ void Map_Draw( void ) {
 		for ( unsigned int j = 0; j < area->numLines; ++j ) {
 			MapPoint *startPoint = &mapData.points[ mapData.lines[ area->lineIndices[ j ] ].startVertex ];
 			MapPoint *endPoint = &mapData.points[ mapData.lines[ area->lineIndices[ j ] ].endVertex ];
+
+			/* ensure the wall is visible before we draw it */
+			bool aVisible = Player_IsPointVisible( player, &PLVector2( startPoint->x, startPoint->y ) );
+			bool bVisible = Player_IsPointVisible( player, &PLVector2( endPoint->x, endPoint->y ) );
+			if ( !aVisible && !bVisible ) {
+				continue;
+			}
 
 			PLTexture *texture = Gfx_GetWallTexture( 20 );
 			unsigned int wallHeight = texture->h * 2;

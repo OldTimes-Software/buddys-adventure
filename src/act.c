@@ -16,6 +16,7 @@ typedef struct ActorSetup {
 } ActorSetup;
 
 void Act_DrawBasic( Actor *self, void *userData ) {
+	Gfx_EnableShaderProgram( SHADER_GENERIC );
 	Gfx_DrawAxesPivot( Act_GetPosition( self ), PLVector3( 0, 0, 0 ) );
 }
 
@@ -33,6 +34,7 @@ ActorSetup actorSpawnSetup[ MAX_ACTOR_TYPES ] = {
 typedef struct Actor {
 	PLVector3        position;
 	PLVector3        velocity;
+	PLVector3        forward;
 	int              health;
 	float            angle;
 	float            viewOffset;
@@ -49,6 +51,7 @@ Actor *Act_SpawnActor( ActorType type, PLVector3 position, float angle ) {
 	Actor *actor = Sys_AllocateMemory( 1, sizeof( Actor ) );
 	actor->node     = plInsertLinkedListNode( actorList, actor );
 	actor->setup    = actorSpawnSetup[ type ];
+	actor->type     = type;
 	actor->position = position;
 	actor->angle    = angle;
 
@@ -70,6 +73,7 @@ Actor *Act_DestroyActor( Actor *self ) {
 	return NULL;
 }
 
+ActorType Act_GetType( const Actor *self ) { return self->type; }
 void      Act_SetPosition( Actor *self, const PLVector3 *position ) { self->position = *position; }
 PLVector3 Act_GetPosition( const Actor *self ) { return self->position; }
 void      Act_SetVelocity( Actor *self, const PLVector3 *velocity ) { self->velocity = *velocity; }
@@ -78,11 +82,11 @@ void      Act_SetAngle( Actor *self, float angle ) { self->angle = angle; }
 float     Act_GetAngle( const Actor *self ) { return self->angle; }
 void      Act_SetViewOffset( Actor *self, float viewOffset ) { self->viewOffset = viewOffset; }
 float     Act_GetViewOffset( Actor *self ) { return self->viewOffset; }
+void      Act_SetUserData( Actor *self, void *userData ) { self->userData = userData; }
+void      *Act_GetUserData( Actor *self ) { return self->userData; }
 
 PLVector3 Act_GetForward( const Actor *self ) {
-	PLVector3 forward;
-	plAnglesAxes( PLVector3( 0, self->angle, 0 ), NULL, NULL, &forward );
-	return forward;
+	return self->forward;
 }
 
 void Act_SpawnActors( void ) {
@@ -150,6 +154,8 @@ void Act_TickActors( void ) {
 		if ( actor->setup.Tick ) {
 			actor->setup.Tick( actor, actor->userData );
 		}
+
+		plAnglesAxes( PLVector3( 0, actor->angle, 0 ), NULL, NULL, &actor->forward );
 
 		curNode = plGetNextLinkedListNode( curNode );
 	}
