@@ -49,7 +49,11 @@ bool Player_IsPointVisible( Actor *self, const PLVector2 *point ) {
 	PLVector3 forward = Act_GetForward( self );
 	PLVector3 curPos = Act_GetPosition( self );
 
-
+	float d = plVector3DotProduct( forward, testPos );
+	if ( d < 0.0f ) {
+		PrintMsg( "%f\n", d );
+		return false;
+	}
 	
 	return true;
 }
@@ -95,7 +99,7 @@ void Player_Tick( Actor *self, void *userData ) {
 	//	curVelocity.z = 0.0f;
 	//}
 
-	PrintMsg( "V: %s\n", plPrintVector3( &curVelocity, pl_int_var ) );
+	//PrintMsg( "V: %s\n", plPrintVector3( &curVelocity, pl_int_var ) );
 
 	PLVector3 curPosition = Act_GetPosition( self );
 	curPosition = plAddVector3( curPosition, curVelocity );

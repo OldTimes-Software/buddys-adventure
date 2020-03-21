@@ -19,6 +19,8 @@ typedef struct MapLine {
 	uint16_t unknown2;
 	uint32_t unknown3;
 	uint16_t unknown4;
+
+	PLVector2 normal;
 } MapLine;
 
 typedef struct MapArea {

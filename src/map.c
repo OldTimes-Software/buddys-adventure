@@ -55,7 +55,21 @@ static void Map_LoadLines( PLPackage *wad ) {
 	mapData.lines = Sys_AllocateMemory( mapData.numLines, sizeof( MapLine ) );
 	for ( unsigned int i = 0; i < mapData.numLines; ++i ) {
 		mapData.lines[ i ].startVertex  = plReadInt16( filePtr, false, &status );
+		if ( mapData.lines[ i ].startVertex >= mapData.numPoints ) {
+			PrintError( "Invalid start vertex for line %d!\n", i );
+		}
+
 		mapData.lines[ i ].endVertex    = plReadInt16( filePtr, false, &status );
+		if ( mapData.lines[ i ].endVertex >= mapData.numPoints ) {
+			PrintError( "Invalid end vertex for line %d!\n", i );
+		}
+
+		/* generate the normal for this particular face */
+		MapPoint *startPoint = &mapData.points[ mapData.lines[ i ].startVertex ];
+		MapPoint *endPoint = &mapData.points[ mapData.lines[ i ].endVertex ];
+
+		mapData.lines[ i ].normal = plComputeLineNormal( &PLVector2( startPoint->x, startPoint->y ), &PLVector2( endPoint->y, endPoint->y ) );
+
 		mapData.lines[ i ].flags        = plReadInt16( filePtr, false, &status );
 		mapData.lines[ i ].unknown0     = plReadInt16( filePtr, false, &status );
 		mapData.lines[ i ].colSomething = plReadInt16( filePtr, false, &status );
