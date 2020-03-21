@@ -23,7 +23,7 @@ void *Sys_AllocateMemory( size_t num, size_t size ) {
 }
 
 /* wrapper for malloc */
-static void Sys_malloc( size_t size ) {
+static void *Sys_malloc( size_t size ) {
 	return Sys_AllocateMemory( 1, size );
 }
 

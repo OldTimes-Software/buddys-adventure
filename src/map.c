@@ -106,8 +106,8 @@ void Map_LoadAreas( PLPackage *wad ) {
 		/* generate a list of all our line indices */
 		area->lineIndices = Sys_AllocateMemory( mapData.areas[ i ].numLines, sizeof( unsigned int ) );
 
-		area->max[ 0 ] = area->max[ 1 ] = INT_MIN;
-		area->min[ 0 ] = area->min[ 1 ] = INT_MAX;
+		area->max[ 0 ] = area->max[ 1 ] = INT32_MIN;
+		area->min[ 0 ] = area->min[ 1 ] = INT32_MAX;
 
 		for ( unsigned int j = 0; j < mapData.areas[ i ].numLines; ++j ) {
 			mapData.areas[ i ].lineIndices[ j ] = plReadInt16( filePtr, false, &status );

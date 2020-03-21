@@ -563,7 +563,6 @@ void Gfx_DisplayScene( void ) {
 
 	endPos = plSubtractVector3( startPos, plScaleVector3f( left, 512.0f ) );
 	plDrawLine( &mat, &startPos, &PLColour( 0, 0, 255, 255 ), &endPos, &PLColour( 255, 0, 0, 255 ) );
-
 #endif
 
 	Map_Draw();
