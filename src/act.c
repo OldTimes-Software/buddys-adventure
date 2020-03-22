@@ -20,27 +20,35 @@ void Act_DrawBasic( Actor *self, void *userData ) {
 	Gfx_DrawAxesPivot( Act_GetPosition( self ), PLVector3( 0, 0, 0 ) );
 }
 
+void Boss_Spawn( Actor *self );
+void Boss_Draw( Actor *self, void *userData );
+void Troo_Spawn( Actor *self );
+void Troo_Draw( Actor *self, void *userData );
+void Sarg_Spawn( Actor *self );
+
 void Player_Spawn( Actor *self );
 void Player_Tick( Actor *self, void *userData );
 
 ActorSetup actorSpawnSetup[ MAX_ACTOR_TYPES ] = {
 		[ ACTOR_NONE   ] = { NULL, NULL, NULL, NULL },
 		[ ACTOR_PLAYER ] = { Player_Spawn, Player_Tick, Act_DrawBasic, NULL },
-		[ ACTOR_BOSS   ] = { NULL, NULL, Act_DrawBasic, NULL },
-		[ ACTOR_SARG   ] = { NULL, NULL, Act_DrawBasic, NULL },
-		[ ACTOR_TROO   ] = { NULL, NULL, Act_DrawBasic, NULL },
+		[ ACTOR_BOSS   ] = { Boss_Spawn, NULL, Boss_Draw, NULL },
+		[ ACTOR_SARG   ] = { Sarg_Spawn, NULL, Act_DrawBasic, NULL },
+		[ ACTOR_TROO   ] = { Troo_Spawn, NULL, Troo_Draw, NULL },
 };
 
 typedef struct Actor {
-	PLVector3        position;
-	PLVector3        velocity;
-	PLVector3        forward;
-	int              health;
-	float            angle;
-	float            viewOffset;
-	unsigned int     curArea;
-	ActorType        type;
-	ActorSetup       setup;
+	PLVector3 position;
+	PLVector3 velocity;
+	PLVector3 forward;
+	float     angle;
+	float     viewOffset;
+
+	unsigned int currentFrame;
+
+	ActorType  type;
+	ActorSetup setup;
+
 	PLLinkedListNode *node;
 	void             *userData;
 } Actor;

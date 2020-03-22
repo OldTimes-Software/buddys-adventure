@@ -26,12 +26,10 @@ static PLTexture *playScrnTexture = NULL;
 
 static PLTexture *numTextureTable[10];
 
-static PLTexture **wallTextures;
-static unsigned int numWallTextures;
-static PLTexture **floorTextures;
-static unsigned int numFloorTextures;
-
-static PLTexture *testSprite;
+static GfxAnimationFrame **wallTextures;
+static unsigned int      numWallTextures;
+static PLTexture         **floorTextures;
+static unsigned int      numFloorTextures;
 
 PLTexture *Gfx_GenerateTextureFromData( uint8_t *data, unsigned int w, unsigned int h, unsigned int numChannels,
 										bool generateMipMap ) {
@@ -83,11 +81,15 @@ PLTexture *Gfx_GenerateTextureFromData( uint8_t *data, unsigned int w, unsigned 
 	return texture;
 }
 
-PLTexture *Gfx_LoadPictureByIndex( const RGBMap *palette, unsigned int index ) {
+GfxAnimationFrame *Gfx_LoadPictureByIndex( const RGBMap *palette, unsigned int index ) {
 	PLFile *filePtr = plLoadPackageFileByIndex( globalWad, index );
 	if ( filePtr == NULL ) {
-		PrintWarn( "Failed to load picture %d!\nPL: %s\n", index, plGetError() );
-		return fallbackTexture;
+		const char *fileName = plGetPackageFileName( globalWad, index );
+		if ( fileName == NULL ) {
+			fileName = "Unknown";
+		}
+
+		PrintError( "Failed to load picture %d (%s)!\nPL: %s\n", index, fileName, plGetError() );
 	}
 
 	bool status;
@@ -96,9 +98,8 @@ PLTexture *Gfx_LoadPictureByIndex( const RGBMap *palette, unsigned int index ) {
 	uint8_t leftOffset = plReadInt8( filePtr, &status );
 	uint8_t topOffset = plReadInt8( filePtr, &status );
 	if ( !status ) {
-		PrintWarn( "Failed to read in width and height for picture %d!\nPL: %s\n", index, plGetError() );
 		plCloseFile( filePtr );
-		return fallbackTexture;
+		PrintError( "Failed to read in width and height for picture %d!\nPL: %s\n", index, plGetError() );
 	}
 
 	/* read in the column offsets */
@@ -109,9 +110,8 @@ PLTexture *Gfx_LoadPictureByIndex( const RGBMap *palette, unsigned int index ) {
 	}
 
 	if ( !status ) {
-		PrintWarn( "Failed to read in column offsets for picture %d!\nPL: %s\n", index, plGetError() );
 		plCloseFile( filePtr );
-		return fallbackTexture;
+		PrintError( "Failed to read in column offsets for picture %d!\nPL: %s\n", index, plGetError() );
 	}
 
 	PLColour *colourBuffer = Sys_AllocateMemory( w * h, sizeof( PLColour ) );
@@ -150,14 +150,18 @@ PLTexture *Gfx_LoadPictureByIndex( const RGBMap *palette, unsigned int index ) {
 
 	plCloseFile( filePtr );
 
-	PLTexture *texture = Gfx_GenerateTextureFromData(( uint8_t * ) colourBuffer, w, h, 4, false );
+	/* setup the animation frame we're going to use */
+	GfxAnimationFrame *frame = Sys_AllocateMemory( 1, sizeof( GfxAnimationFrame ) );
+	frame->texture    = Gfx_GenerateTextureFromData(( uint8_t * ) colourBuffer, w, h, 4, false );
+	frame->leftOffset = leftOffset;
+	frame->topOffset  = topOffset;
 
 	free( colourBuffer );
 
-	return texture;
+	return frame;
 }
 
-PLTexture *Gfx_LoadPictureByName( const RGBMap *palette, const char *indexName ) {
+GfxAnimationFrame *Gfx_LoadPictureByName( const RGBMap *palette, const char *indexName ) {
 	return Gfx_LoadPictureByIndex( palette, plGetPackageTableIndex( globalWad, indexName ) );
 }
 
@@ -167,11 +171,11 @@ PLTexture *Gfx_GetWallTexture( unsigned int index ) {
 		return fallbackTexture;
 	}
 
-	return wallTextures[ index ];
+	return wallTextures[ index ]->texture;
 }
 
 void Gfx_LoadWallTextures( void ) {
-	unsigned int posStart = plGetPackageTableIndex( globalWad, "P_START" );
+	unsigned int posStart = plGetPackageTableIndex( globalWad, "P_START" ) + 1;
 	if ( plGetFunctionResult() != PL_RESULT_SUCCESS ) {
 		PrintError( "Failed to find the start of the wall table!\nPL: %s\n", plGetError() );
 	}
@@ -185,7 +189,7 @@ void Gfx_LoadWallTextures( void ) {
 	wallTextures = Sys_AllocateMemory( numWallTextures, sizeof( PLTexture* ) );
 
 	for ( unsigned int i = 0; i < numWallTextures; ++i ) {
-		unsigned int fileIndex = posStart + ( i + 1 );
+		unsigned int fileIndex = posStart + i;
 		wallTextures[ i ] = Gfx_LoadPictureByIndex( playPal, fileIndex );
 	}
 }
@@ -193,7 +197,12 @@ void Gfx_LoadWallTextures( void ) {
 PLTexture *Gfx_LoadFlatByIndex( const RGBMap *palette, unsigned int index ) {
 	PLFile *filePtr = plLoadPackageFileByIndex( globalWad, index );
 	if ( filePtr == NULL ) {
-		PrintWarn( "Failed to load flat %d!\nPL: %s\n", index, plGetError() );
+		const char *fileName = plGetPackageFileName( globalWad, index );
+		if ( fileName == NULL ) {
+			fileName = "Unknown";
+		}
+
+		PrintWarn( "Failed to load flat %d (%s)!\nPL: %s\n", index, fileName, plGetError() );
 		return fallbackTexture;
 	}
 
@@ -240,7 +249,7 @@ PLTexture *Gfx_GetFloorTexture( unsigned int index ) {
 }
 
 void Gfx_LoadFloorTextures( void ) {
-	unsigned int posStart = plGetPackageTableIndex( globalWad, "F_START" );
+	unsigned int posStart = plGetPackageTableIndex( globalWad, "F_START" ) + 1;
 	if ( plGetFunctionResult() != PL_RESULT_SUCCESS ) {
 		PrintError( "Failed to find the start of the floor table!\nPL: %s\n", plGetError() );
 	}
@@ -254,7 +263,7 @@ void Gfx_LoadFloorTextures( void ) {
 	floorTextures = Sys_AllocateMemory( numFloorTextures, sizeof( PLTexture* ) );
 
 	for ( unsigned int i = 0; i < numFloorTextures; ++i ) {
-		unsigned int fileIndex = posStart + ( i + 1 );
+		unsigned int fileIndex = posStart + i;
 		floorTextures[ i ] = Gfx_LoadFlatByIndex( playPal, fileIndex );
 	}
 }
@@ -274,6 +283,16 @@ void Gfx_LoadPalette( RGBMap *palette, const char *indexName ) {
 	}
 
 	plCloseFile( filePtr );
+}
+
+void Gfx_LoadAnimationFrames( const char **frameList, GfxAnimationFrame **destination, unsigned int numFrames ) {
+	for ( unsigned int i = 0; i < numFrames; ++i ) {
+		PrintMsg( "Loading frame %d (%s)...\n", i, frameList[ i ] );
+		destination[ i ] = Gfx_LoadPictureByName( playPal, frameList[ i ] );
+		if ( destination[ i ] == NULL ) {
+			PrintError( "Failed to load frame %d (%s)!\n", i, frameList[ i ] );
+		}
+	}
 }
 
 PLTexture *Gfx_LoadLumpTexture( const RGBMap *palette, const char *indexName ) {
@@ -313,9 +332,9 @@ PLTexture *Gfx_LoadLumpTexture( const RGBMap *palette, const char *indexName ) {
 	/* now convert using the palette (I'm lazy, so we'll just convert to rgba) */
 	PLColour *colourBuffer = malloc( sizeof( PLColour ) * lumpDataSize );
 	for ( unsigned int i = 0; i < lumpDataSize; ++i ) {
-		colourBuffer[ i ].r = palette[ imageBuffer[ i ]].r;
-		colourBuffer[ i ].g = palette[ imageBuffer[ i ]].g;
-		colourBuffer[ i ].b = palette[ imageBuffer[ i ]].b;
+		colourBuffer[ i ].r = palette[ imageBuffer[ i ] ].r;
+		colourBuffer[ i ].g = palette[ imageBuffer[ i ] ].g;
+		colourBuffer[ i ].b = palette[ imageBuffer[ i ] ].b;
 		colourBuffer[ i ].a = ( imageBuffer[ i ] == 255 ) ? 0 : 255;
 	}
 	free( imageBuffer );
@@ -327,7 +346,7 @@ PLTexture *Gfx_LoadLumpTexture( const RGBMap *palette, const char *indexName ) {
 	return texture;
 }
 
-void Gfx_RegisterShader( ShaderType type, const char *vertPath, const char *fragPath ) {
+static void Gfx_RegisterShader( GfxShaderType type, const char *vertPath, const char *fragPath ) {
 	shaderPrograms[ type ] = plCreateShaderProgram();
 	if ( shaderPrograms[ type ] == NULL) {
 		PrintError( "Failed to create shader program!\nPL: %s\n", plGetError());
@@ -346,15 +365,58 @@ void Gfx_RegisterShader( ShaderType type, const char *vertPath, const char *frag
 	}
 }
 
-void Gfx_EnableShaderProgram( ShaderType type ) {
+void Gfx_EnableShaderProgram( GfxShaderType type ) {
 	plSetShaderProgram( shaderPrograms[ type ] );
+}
+
+void Gfx_DrawAnimationFrame( GfxAnimationFrame *frame, PLVector3 position ) {
+	/* here we go, dumb maths written by dumb me... */
+	PLVector2 a = PLVector2( playerCamera->position.x, playerCamera->position.y );
+	PLVector2 b = PLVector2( position.x, position.y );
+	PLVector2 normal = plComputeLineNormal( &a, &b );
+
+	static float spin = 0.0f;
+	float spriteAngle = ( spin += 0.005f ) * PL_180_DIV_PI; // atan2f( normal.y, normal.x ) * PL_180_DIV_PI;
+	PrintMsg( "Angle: %s (%f)\n", plPrintVector2( &normal, pl_float_var ), spriteAngle );
+
+	PLMatrix4 transform = plMatrix4Identity();
+	transform = plMultiplyMatrix4( transform,
+								   plRotateMatrix4( plDegreesToRadians( 0.0f ), PLVector3( 1, 0, 0 ) ));
+	transform = plMultiplyMatrix4( transform,
+								   plRotateMatrix4( plDegreesToRadians( spriteAngle ), PLVector3( 0, 1, 0 ) ));
+	transform = plMultiplyMatrix4( transform,
+								   plRotateMatrix4( plDegreesToRadians( 180.0f ), PLVector3( 0, 0, 1 ) ));
+	transform = plMultiplyMatrix4( transform, plTranslateMatrix4( position ) );
+
+	Gfx_EnableShaderProgram( SHADER_GENERIC );
+	plDrawSimpleLine( &transform, &PLVector3( 0, 0, 0 ), &PLVector3( 64, 0, 0 ), &PLColourRGB( 0, 255, 0 ) );
+	plDrawSimpleLine( &transform, &PLVector3( 0, 0, 0 ), &PLVector3( 0, 64, 0 ), &PLColourRGB( 0, 255, 0 ) );
+	plDrawSimpleLine( &transform, &PLVector3( 0, 0, 0 ), &PLVector3( 0, 0, 64 ), &PLColourRGB( 0, 255, 0 ) );
+
+	Gfx_EnableShaderProgram( SHADER_LIT );
+
+#if 0
+	int w = frame->texture->w; //* 1.7;
+	int h = frame->texture->h; //* 1.7;
+	int x = -frame->leftOffset;
+	int y = -frame->topOffset;
+#else /* for the sake of time, let's botch it! */
+	int w = frame->texture->w * 1.7;
+	int h = frame->texture->h * 1.7;
+	int x = -( w / 2 );
+	int y = -h;
+#endif
+
+	plDrawTexturedRectangle( &transform, x, y, w, h, frame->texture );
 }
 
 void Gfx_DrawDigit( int x, int y, int digit ) {
 	if ( digit < 0 ) { digit = 0; }
 	else if ( digit > 9 ) { digit = 9; }
 
+	PLMatrix4 transform = plMatrix4Identity();
 	plDrawTexturedRectangle(
+			&transform,
 			x, y,
 			( signed ) numTextureTable[ digit ]->w,
 			( signed ) numTextureTable[ digit ]->h,
@@ -458,8 +520,6 @@ void Gfx_Initialize( void ) {
 	Gfx_LoadWallTextures();
 	Gfx_LoadFloorTextures();
 
-	testSprite = Gfx_LoadPictureByName( playPal, "PSHOA0" );
-
 	plSetDepthBufferMode( PL_DEPTHBUFFER_ENABLE );
 	plSetDepthMask( true );
 }
@@ -469,8 +529,14 @@ void Gfx_Shutdown( void ) {
 	plDestroyCamera( playerCamera );
 }
 
+static void Gfx_DrawViewSprite( void ) {
+
+}
+
 void Gfx_DisplayMenu( void ) {
 	plSetupCamera( auxCamera );
+
+	PLMatrix4 transform = plMatrix4Identity();
 
 #ifndef DEBUG_CAM
 	switch ( Gam_GetMenuState()) {
@@ -479,13 +545,17 @@ void Gfx_DisplayMenu( void ) {
 
 		case MENU_STATE_START:
 			Gfx_EnableShaderProgram( SHADER_TEXTURE );
-			plDrawTexturedRectangle( 0, 0, YIN_DISPLAY_WIDTH, YIN_DISPLAY_HEIGHT, titlePicTexture );
+			plDrawTexturedRectangle( &transform, 0, 0, YIN_DISPLAY_WIDTH, YIN_DISPLAY_HEIGHT, titlePicTexture );
 			break;
 
 		case MENU_STATE_HUD:
 			Gfx_EnableShaderProgram( SHADER_ALPHA_TEST );
-			//plDrawTexturedRectangle( 0, 0, YIN_DISPLAY_WIDTH, YIN_DISPLAY_HEIGHT, playScrnTexture );
 
+			Gfx_DrawViewSprite();
+
+			plDrawTexturedRectangle( &transform, 0, 0, YIN_DISPLAY_WIDTH, YIN_DISPLAY_HEIGHT, playScrnTexture );
+
+#if 0
 			int gunWidth = 320 / 1.5;
 			int gunHeight = 200 / 1.5;
 			plDrawTexturedRectangle(
@@ -493,8 +563,7 @@ void Gfx_DisplayMenu( void ) {
 					YIN_DISPLAY_HEIGHT - gunHeight,
 					gunWidth, gunHeight,
 					testSprite );
-
-			Gfx_DrawNumber( 16, 16, 128 );
+#endif
 			break;
 	}
 #endif
@@ -530,7 +599,7 @@ void Gfx_DisplayScene( void ) {
 	playerCamera->angles.x = -85;
 	playerCamera->angles.y = -Act_GetAngle( player ) + 90.0f;
 #else
-	playerCamera->angles.y = Act_GetAngle( player );
+	playerCamera->angles.y = -Act_GetAngle( player ) + 90.0f;
 	playerCamera->position = Act_GetPosition( player );
 
 	/* view bob! */

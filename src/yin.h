@@ -64,7 +64,7 @@ enum {
 #define PrintWarn( ... )  plLogMessage( LOG_LEVEL_WARN, __VA_ARGS__ )
 #define PrintMsg( ... )   plLogMessage( LOG_LEVEL_INFO, __VA_ARGS__ )
 
-#define DEBUG_CAM
+//#define DEBUG_CAM
 
 extern PLPackage *globalWad;
 #define YIN_GLOBAL_WAD "doom.wad"

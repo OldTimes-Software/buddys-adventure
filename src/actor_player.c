@@ -32,7 +32,7 @@ static void Player_CalculateViewFrustum( Actor *self ) {
 }
 
 /**
- * Ensure the 2D point provided is within the player's field of view 
+ * Ensure the 2D point provided is forward of the player's position
  */
 bool Player_IsPointVisible( Actor *self, const PLVector2 *point ) {
 	if ( Act_GetType( self ) != ACTOR_PLAYER ) {
@@ -44,6 +44,7 @@ bool Player_IsPointVisible( Actor *self, const PLVector2 *point ) {
 		return false;
 	}
 
+#if 0 /* maybe for the next jam... */
 	PLVector3 testPos = PLVector3( point->x, 0.0f, point->y );
 
 	PLVector3 forward = Act_GetForward( self );
@@ -56,6 +57,9 @@ bool Player_IsPointVisible( Actor *self, const PLVector2 *point ) {
 	}
 	
 	return true;
+#else
+	return true;
+#endif
 }
 
 void Player_Spawn( Actor *self ) {
