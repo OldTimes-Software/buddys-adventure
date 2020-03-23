@@ -67,7 +67,7 @@ enum {
 //#define DEBUG_CAM
 
 extern PLPackage *globalWad;
-#define YIN_GLOBAL_WAD "doom.wad"
+#define YIN_GLOBAL_WAD "yin.wad"
 
 bool Sys_GetInputState( InputButton inputIndex );
 
