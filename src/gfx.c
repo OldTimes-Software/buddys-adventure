@@ -375,8 +375,7 @@ void Gfx_DrawAnimationFrame( GfxAnimationFrame *frame, PLVector3 position ) {
 	PLVector2 b = PLVector2( position.x, position.y );
 	PLVector2 normal = plComputeLineNormal( &a, &b );
 
-	static float spin = 0.0f;
-	float spriteAngle = ( spin += 0.005f ) * PL_180_DIV_PI; // atan2f( normal.y, normal.x ) * PL_180_DIV_PI;
+	float spriteAngle = atan2f( normal.y, normal.x ) * PL_180_DIV_PI;
 	PrintMsg( "Angle: %s (%f)\n", plPrintVector2( &normal, pl_float_var ), spriteAngle );
 
 	PLMatrix4 transform = plMatrix4Identity();
