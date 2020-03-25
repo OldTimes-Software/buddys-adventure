@@ -40,6 +40,9 @@ void      *Act_GetUserData( Actor *self );
 void  Act_SetViewOffset( Actor *self, float viewOffset );
 float Act_GetViewOffset( Actor *self );
 
+void Act_SetBounds( Actor *self, PLVector3 mins, PLVector3 maxs );
+const PLAABB *Act_GetBounds( Actor *self );
+
 PLVector3 Act_GetForward( const Actor *self );
 
 /* player functions */

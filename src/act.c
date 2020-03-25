@@ -64,6 +64,10 @@ Actor *Act_SpawnActor( ActorType type, PLVector3 position, float angle ) {
 	actor->position = position;
 	actor->angle    = angle;
 
+	/* give everything a set of basic bounds */
+	actor->bounds.maxs = PLVector3( 8.0f, 16.0f, 8.0f );
+	actor->bounds.mins = PLVector3( -8.0f, 0.0f, -8.0f );
+
 	if ( actor->setup.Spawn != NULL ) {
 		actor->setup.Spawn( actor );
 	}
@@ -93,6 +97,19 @@ void      Act_SetViewOffset( Actor *self, float viewOffset ) { self->viewOffset 
 float     Act_GetViewOffset( Actor *self ) { return self->viewOffset; }
 void      Act_SetUserData( Actor *self, void *userData ) { self->userData = userData; }
 void      *Act_GetUserData( Actor *self ) { return self->userData; }
+
+void Act_SetBounds( Actor *self, PLVector3 mins, PLVector3 maxs ) {
+	if( mins.x > maxs.x || mins.y > maxs.y || mins.z > maxs.z ) {
+		PrintError( "Invalid bounds for actor (mins %s, maxs %s)!\n", plPrintVector3( &mins, pl_int_var ), plPrintVector3( &maxs, pl_int_var ) );
+	}
+
+	self->bounds.maxs = maxs;
+	self->bounds.mins = mins;
+}
+
+const PLAABB *Act_GetBounds( Actor *self ) {
+	return &self->bounds;
+}
 
 PLVector3 Act_GetForward( const Actor *self ) {
 	return self->forward;

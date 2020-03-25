@@ -104,7 +104,7 @@ GfxAnimationFrame *Gfx_LoadPictureByIndex( const RGBMap *palette, unsigned int i
 
 	/* read in the column offsets */
 
-	int16_t *columnOffsets = malloc( sizeof( int16_t ) * w );
+	int16_t *columnOffsets = Sys_AllocateMemory( w, sizeof( int16_t ) );
 	for ( unsigned int i = 0; i < w; ++i ) {
 		columnOffsets[ i ] = plReadInt16( filePtr, false, &status );
 	}
@@ -114,7 +114,7 @@ GfxAnimationFrame *Gfx_LoadPictureByIndex( const RGBMap *palette, unsigned int i
 		PrintError( "Failed to read in column offsets for picture %d!\nPL: %s\n", index, plGetError() );
 	}
 
-	PLColour *colourBuffer = Sys_AllocateMemory( w * h, sizeof( PLColour ) );
+	PLColour *colourBuffer = Sys_AllocateMemory( (size_t) w * h, sizeof( PLColour ) );
 	for ( unsigned int i = 0; i < w; ++i ) {
 		plFileSeek( filePtr, columnOffsets[ i ], PL_SEEK_SET );
 
@@ -215,7 +215,7 @@ PLTexture *Gfx_LoadFlatByIndex( const RGBMap *palette, unsigned int index ) {
 		return fallbackTexture;
 	}
 
-	PLColour *colourBuffer = malloc( sizeof( PLColour ) * 4096 );
+	PLColour *colourBuffer = Sys_AllocateMemory( 4096, sizeof( PLColour ) );
 	for ( unsigned int i = 0; i < 4096; ++i ) {
 		bool status;
 		uint8_t pixel = plReadInt8( filePtr, &status );
@@ -322,7 +322,7 @@ PLTexture *Gfx_LoadLumpTexture( const RGBMap *palette, const char *indexName ) {
 	/* seems to be totally unused... */
 	plFileSeek( filePtr, 4, PL_SEEK_CUR );
 
-	uint8_t *imageBuffer = malloc( lumpDataSize );
+	uint8_t *imageBuffer = Sys_AllocateMemory( lumpDataSize, sizeof( uint8_t ) );
 	if ( plReadFile( filePtr, imageBuffer, 1, lumpDataSize ) != lumpDataSize ) {
 		PrintError( "Failed to read in lump data for \"%s\"!\nPL: %s\n", indexName, plGetError());
 	}
@@ -330,7 +330,7 @@ PLTexture *Gfx_LoadLumpTexture( const RGBMap *palette, const char *indexName ) {
 	plCloseFile( filePtr );
 
 	/* now convert using the palette (I'm lazy, so we'll just convert to rgba) */
-	PLColour *colourBuffer = malloc( sizeof( PLColour ) * lumpDataSize );
+	PLColour *colourBuffer = Sys_AllocateMemory( lumpDataSize, sizeof( PLColour ) );
 	for ( unsigned int i = 0; i < lumpDataSize; ++i ) {
 		colourBuffer[ i ].r = palette[ imageBuffer[ i ] ].r;
 		colourBuffer[ i ].g = palette[ imageBuffer[ i ] ].g;
