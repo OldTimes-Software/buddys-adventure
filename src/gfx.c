@@ -346,19 +346,30 @@ PLTexture *Gfx_LoadLumpTexture( const RGBMap *palette, const char *indexName ) {
 	return texture;
 }
 
+static void Gfx_RegisterShaderStage( PLShaderProgram *program, PLShaderStageType type, const char *path ) {
+	PLFile *filePtr = plLoadPackageFile( globalWad, path );
+	if ( filePtr == NULL ) {
+		PrintError( "Failed to find shader \"%s\" in WAD!\nPL: %s\n", path, plGetError() );
+	}
+
+	const char *buffer = plGetFileData( filePtr );
+	size_t length = plGetFileSize( filePtr );
+
+	if ( !plRegisterShaderStageFromMemory( program, buffer, length, type ) ) {
+		PrintError( "Failed to register stage!\nPL: %s\n", plGetError() );
+	}
+
+	plCloseFile( filePtr );
+}
+
 static void Gfx_RegisterShader( GfxShaderType type, const char *vertPath, const char *fragPath ) {
 	shaderPrograms[ type ] = plCreateShaderProgram();
 	if ( shaderPrograms[ type ] == NULL) {
 		PrintError( "Failed to create shader program!\nPL: %s\n", plGetError());
 	}
 
-	if ( !plRegisterShaderStageFromDisk( shaderPrograms[ type ], vertPath, PL_SHADER_TYPE_VERTEX )) {
-		PrintError( "Failed to register vertex stage!\nPL: %s\n", plGetError());
-	}
-
-	if ( !plRegisterShaderStageFromDisk( shaderPrograms[ type ], fragPath, PL_SHADER_TYPE_FRAGMENT )) {
-		PrintError( "Failed to register fragment stage!\nPL: %s\n", plGetError());
-	}
+	Gfx_RegisterShaderStage( shaderPrograms[ type ], PL_SHADER_TYPE_VERTEX, vertPath );
+	Gfx_RegisterShaderStage( shaderPrograms[ type ], PL_SHADER_TYPE_FRAGMENT, fragPath );
 
 	if ( !plLinkShaderProgram( shaderPrograms[ type ] )) {
 		PrintError( "Failed to link shader stages!\nPL: %s\n", plGetError());
@@ -467,10 +478,10 @@ void Gfx_Initialize( void ) {
 	playerCamera->viewport.h = YIN_DISPLAY_HEIGHT;
 
 	/* create the default shader programs */
-	Gfx_RegisterShader( SHADER_GENERIC, "shaders/generic.vert", "shaders/vertex_colour.frag" );
-	Gfx_RegisterShader( SHADER_TEXTURE, "shaders/generic.vert", "shaders/texture.frag" );
-	Gfx_RegisterShader( SHADER_ALPHA_TEST, "shaders/generic.vert", "shaders/alpha_test.frag" );
-	Gfx_RegisterShader( SHADER_LIT, "shaders/generic.vert", "shaders/lit_texture.frag" );
+	Gfx_RegisterShader( SHADER_GENERIC, "SVERTEX", "SCOLOUR" );
+	Gfx_RegisterShader( SHADER_TEXTURE, "SVERTEX", "STEXTURE" );
+	Gfx_RegisterShader( SHADER_ALPHA_TEST, "SVERTEX", "SALPHA" );
+	Gfx_RegisterShader( SHADER_LIT, "SVERTEX", "SLIT" );
 
 	plSetClearColour(PLColour( 0, 0, 0, 255 ) );
 
