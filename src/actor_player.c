@@ -19,6 +19,8 @@ typedef struct APlayer {
 	PLVector3 lrViewPos;
 
 	PLVector3 cViewPos; /* center */
+
+	float forwardVelocity;
 } APlayer;
 
 static void Player_CalculateViewFrustum( Actor *self ) {
@@ -80,30 +82,20 @@ void Player_Tick( Actor *self, void *userData ) {
 	}
 	Act_SetAngle( self, nAngle );
 
-	float forwardVelocity = 0.0f;
+	APlayer *playerData = ( APlayer * ) userData;
 	if ( Sys_GetInputState( YIN_INPUT_UP ) ) {
-		forwardVelocity = 1.0f;
+		playerData->forwardVelocity += 1.0f;
 	} else if ( Sys_GetInputState( YIN_INPUT_DOWN ) ) {
-		forwardVelocity = -1.0f;
+		playerData->forwardVelocity -= 1.0f;
+	} else if ( playerData->forwardVelocity != 0.0f ) {
+		playerData->forwardVelocity += ( playerData->forwardVelocity > 0.0f ) ? -1.0f : 1.0f;
 	}
 
-	PLVector3 curVelocity = Act_GetVelocity( self );
-	//plSubtractVector3( curVelocity, PLVector3( 0.1f, 0.0f, 0.1f ) );
-
-	PLVector3 forward = Act_GetForward( self );
-	curVelocity = plAddVector3( curVelocity, plScaleVector3f( forward, forwardVelocity ) );
-
 	/* clamp the velocity as necessary */
-	//curVelocity.x = plClamp( -PLAYER_MAX_VELOCITY, curVelocity.x, PLAYER_MAX_VELOCITY );
-	//curVelocity.z = plClamp( -PLAYER_MAX_VELOCITY, curVelocity.z, PLAYER_MAX_VELOCITY );
-	//if ( curVelocity.x < PLAYER_MIN_VELOCITY && curVelocity.x > -PLAYER_MIN_VELOCITY ) {
-	//	curVelocity.x = 0.0f;
-	//}
-	//if ( curVelocity.z < PLAYER_MIN_VELOCITY && curVelocity.z > -PLAYER_MIN_VELOCITY ) {
-	//	curVelocity.z = 0.0f;
-	//}
+	playerData->forwardVelocity = plClamp( -PLAYER_MAX_VELOCITY, playerData->forwardVelocity, PLAYER_MAX_VELOCITY );
 
-	//PrintMsg( "V: %s\n", plPrintVector3( &curVelocity, pl_int_var ) );
+	PLVector3 curVelocity = Act_GetVelocity( self );
+	curVelocity = plScaleVector3f( Act_GetForward( self ), playerData->forwardVelocity );
 
 	PLVector3 curPosition = Act_GetPosition( self );
 	curPosition = plAddVector3( curPosition, curVelocity );

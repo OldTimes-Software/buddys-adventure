@@ -43,6 +43,7 @@ typedef struct Actor {
 	PLVector3 forward;
 	float     angle;
 	float     viewOffset;
+	PLAABB    bounds;
 
 	unsigned int currentFrame;
 
