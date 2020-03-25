@@ -64,12 +64,6 @@ static void Map_LoadLines( PLPackage *wad ) {
 			PrintError( "Invalid end vertex for line %d!\n", i );
 		}
 
-		/* generate the normal for this particular face */
-		MapPoint *startPoint = &mapData.points[ mapData.lines[ i ].startVertex ];
-		MapPoint *endPoint = &mapData.points[ mapData.lines[ i ].endVertex ];
-
-		mapData.lines[ i ].normal = plComputeLineNormal( &PLVector2( startPoint->x, startPoint->y ), &PLVector2( endPoint->y, endPoint->y ) );
-
 		mapData.lines[ i ].flags        = plReadInt16( filePtr, false, &status );
 		mapData.lines[ i ].unknown0     = plReadInt16( filePtr, false, &status );
 		mapData.lines[ i ].colSomething = plReadInt16( filePtr, false, &status );
@@ -111,11 +105,16 @@ void Map_LoadAreas( PLPackage *wad ) {
 
 		for ( unsigned int j = 0; j < mapData.areas[ i ].numLines; ++j ) {
 			mapData.areas[ i ].lineIndices[ j ] = plReadInt16( filePtr, false, &status );
+			if ( mapData.areas[ i ].lineIndices[ j ] >= mapData.numLines ) {
+				PrintError( "Invalid line index %d in area %d!\n", mapData.areas[ i ].lineIndices[ j ], i );
+			}
+
+			MapLine *curLine = &mapData.lines[ mapData.areas[ i ].lineIndices[ j ] ];
 
 			/* calculate the area bounds */
 			const MapPoint *points[ 2 ];
-			points[ 0 ] = &mapData.points[ mapData.lines[ area->lineIndices[ j ] ].startVertex ];
-			points[ 1 ] = &mapData.points[ mapData.lines[ area->lineIndices[ j ] ].endVertex ];
+			points[ 0 ] = &mapData.points[ curLine->startVertex ];
+			points[ 1 ] = &mapData.points[ curLine->endVertex ];
 
 			for ( unsigned int k = 0; k < 2; ++k ) {
 				if ( points[ k ]->x > area->max[ 0 ] ) {
@@ -134,6 +133,9 @@ void Map_LoadAreas( PLPackage *wad ) {
 					area->min[ 1 ] = points[ k ]->y;
 				}
 			}
+
+			/* generate the normal for this particular face */
+			curLine->normal = plComputeLineNormal( &PLVector2( points[ 0 ]->x, points[ 0 ]->y ), &PLVector2( points[ 1 ]->x, points[ 1 ]->y ) );
 		}
 	}
 
@@ -179,10 +181,27 @@ void Map_Draw( void ) {
 					2, 2,
 					texture
 			);
+
+#ifdef DEBUG_WALL_NORMALS
+			Gfx_EnableShaderProgram( SHADER_GENERIC );
+
+			PLVector2 normal = mapData.lines[ area->lineIndices[ j ] ].normal; //plComputeLineNormal( &PLVector2( startPoint->x, startPoint->y ), &PLVector2( endPoint->x, endPoint->y ) );
+
+			PLVector2 linePos;
+			linePos = plAddVector2( PLVector2( startPoint->x, startPoint->y ), PLVector2( endPoint->x, endPoint->y ) );
+			linePos = plDivideVector2f( &linePos, 2.0f );
+			
+			PLVector2 lineEndPos;
+			lineEndPos = plAddVector2( linePos, plScaleVector2f( &normal, 64.0f ) );
+
+			PLMatrix4 transform = plMatrix4Identity();
+			plDrawSimpleLine( &transform, &PLVector3( linePos.x, 16.0f, linePos.y ), &PLVector3( lineEndPos.x, 16.0f, lineEndPos.y ), &PLColour( 255, 0, 0, 255 ) );
+
+			Gfx_EnableShaderProgram( SHADER_LIT );
+#endif
 		}
 
 		/* draw the ceiling and floor */
-
 		plDrawTexturedQuad(
 				&PLVector3( area->max[ 0 ], 0.0f, area->max[ 1 ] ),
 				&PLVector3( area->min[ 0 ], 0.0f, area->max[ 1 ] ),
