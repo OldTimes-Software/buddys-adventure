@@ -185,14 +185,12 @@ void Map_Draw( void ) {
 #ifdef DEBUG_WALL_NORMALS
 			Gfx_EnableShaderProgram( SHADER_GENERIC );
 
-			PLVector2 normal = mapData.lines[ area->lineIndices[ j ] ].normal; //plComputeLineNormal( &PLVector2( startPoint->x, startPoint->y ), &PLVector2( endPoint->x, endPoint->y ) );
-
 			PLVector2 linePos;
 			linePos = plAddVector2( PLVector2( startPoint->x, startPoint->y ), PLVector2( endPoint->x, endPoint->y ) );
 			linePos = plDivideVector2f( &linePos, 2.0f );
 			
 			PLVector2 lineEndPos;
-			lineEndPos = plAddVector2( linePos, plScaleVector2f( &normal, 64.0f ) );
+			lineEndPos = plAddVector2( linePos, plScaleVector2f( &mapData.lines[ area->lineIndices[ j ] ].normal, 64.0f ) );
 
 			PLMatrix4 transform = plMatrix4Identity();
 			plDrawSimpleLine( &transform, &PLVector3( linePos.x, 16.0f, linePos.y ), &PLVector3( lineEndPos.x, 16.0f, lineEndPos.y ), &PLColour( 255, 0, 0, 255 ) );

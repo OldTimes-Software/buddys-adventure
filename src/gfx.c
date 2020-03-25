@@ -206,8 +206,7 @@ PLTexture *Gfx_LoadFlatByIndex( const RGBMap *palette, unsigned int index ) {
 		return fallbackTexture;
 	}
 
-	/* all flats are assumed to be 64x64, which is a shit limitation, but
-	 * we should respect that */
+	/* all flats are assumed to be 64x64 */
 	size_t flatSize = plGetFileSize( filePtr );
 	if ( flatSize != 4096 ) {
 		PrintWarn( "Unexpected flat size for %d, %d/64!\n", index, flatSize );
@@ -215,8 +214,8 @@ PLTexture *Gfx_LoadFlatByIndex( const RGBMap *palette, unsigned int index ) {
 		return fallbackTexture;
 	}
 
-	PLColour *colourBuffer = Sys_AllocateMemory( 4096, sizeof( PLColour ) );
-	for ( unsigned int i = 0; i < 4096; ++i ) {
+	PLColour *colourBuffer = Sys_AllocateMemory( flatSize, sizeof( PLColour ) );
+	for ( unsigned int i = 0; i < flatSize; ++i ) {
 		bool status;
 		uint8_t pixel = plReadInt8( filePtr, &status );
 		if ( !status ) {
@@ -382,14 +381,14 @@ void Gfx_EnableShaderProgram( GfxShaderType type ) {
 
 void Gfx_DrawAnimationFrame( GfxAnimationFrame *frame, PLVector3 position ) {
 	/* here we go, dumb maths written by dumb me... */
-	PLVector2 a = PLVector2( playerCamera->position.x, playerCamera->position.y );
-	PLVector2 b = PLVector2( position.x, position.y );
+	PLVector2 a = PLVector2( position.x, position.z );
+	PLVector2 b = PLVector2( playerCamera->position.x, playerCamera->position.z );
 	PLVector2 normal = plComputeLineNormal( &a, &b );
 
 	float spriteAngle = atan2f( normal.y, normal.x ) * PL_180_DIV_PI;
-	PrintMsg( "Angle: %s (%f)\n", plPrintVector2( &normal, pl_float_var ), spriteAngle );
 
-	PLMatrix4 transform = plMatrix4Identity();
+	PLMatrix4 transform;
+	transform = plMatrix4Identity();
 	transform = plMultiplyMatrix4( transform,
 								   plRotateMatrix4( plDegreesToRadians( 0.0f ), PLVector3( 1, 0, 0 ) ));
 	transform = plMultiplyMatrix4( transform,
@@ -398,10 +397,14 @@ void Gfx_DrawAnimationFrame( GfxAnimationFrame *frame, PLVector3 position ) {
 								   plRotateMatrix4( plDegreesToRadians( 180.0f ), PLVector3( 0, 0, 1 ) ));
 	transform = plMultiplyMatrix4( transform, plTranslateMatrix4( position ) );
 
+#if 0 /* debug */
 	Gfx_EnableShaderProgram( SHADER_GENERIC );
-	plDrawSimpleLine( &transform, &PLVector3( 0, 0, 0 ), &PLVector3( 64, 0, 0 ), &PLColourRGB( 0, 255, 0 ) );
-	plDrawSimpleLine( &transform, &PLVector3( 0, 0, 0 ), &PLVector3( 0, 64, 0 ), &PLColourRGB( 0, 255, 0 ) );
-	plDrawSimpleLine( &transform, &PLVector3( 0, 0, 0 ), &PLVector3( 0, 0, 64 ), &PLColourRGB( 0, 255, 0 ) );
+
+	PLMatrix4 dTransform = plMatrix4Identity();
+	PLVector3 dStartPos = PLVector3( position.x, 4.0f, position.z );
+	PLVector3 dEndPos   = plAddVector3( dStartPos, plScaleVector3f( PLVector3( normal.x, 0.0f, normal.y ), 256.0f ) );
+	plDrawSimpleLine( &dTransform, &dStartPos, &dEndPos, &PLColourRGB( 0, 0, 255 ) );
+#endif
 
 	Gfx_EnableShaderProgram( SHADER_LIT );
 
@@ -418,6 +421,10 @@ void Gfx_DrawAnimationFrame( GfxAnimationFrame *frame, PLVector3 position ) {
 #endif
 
 	plDrawTexturedRectangle( &transform, x, y, w, h, frame->texture );
+}
+
+void Gfx_DrawAnimation( GfxAnimationFrame **animation, unsigned int numFrames, bool hasAngles ) {
+
 }
 
 void Gfx_DrawDigit( int x, int y, int digit ) {
@@ -510,22 +517,6 @@ void Gfx_Initialize( void ) {
 		snprintf( numName, sizeof( numName ), "WNUMBER%d", i );
 		numTextureTable[ i ] = Gfx_LoadLumpTexture( titlePal, numName );
 	}
-#if 0
-	scaleBuffer = plCreateFrameBuffer( YIN_DISPLAY_WIDTH, YIN_DISPLAY_HEIGHT, PL_BUFFER_COLOUR | PL_BUFFER_DEPTH );
-	if ( scaleBuffer == NULL ) {
-		PrintError( "Failed to create framebuffer!\nPL: %s\n", plGetError() );
-	}
-
-	scaleBufferTexture = plGetFrameBufferTextureAttachment( scaleBuffer );
-	if ( scaleBufferTexture == NULL ) {
-		PrintError( "Failed to get texture attachment for buffer!\nPL: %s\n", plGetError() );
-	}
-
-	plSetDepthBufferMode( PL_DEPTHBUFFER_ENABLE );
-	plSetDepthMask( true );
-
-	plBindFrameBuffer( NULL, PL_FRAMEBUFFER_DRAW );
-#endif
 
 	Gfx_LoadWallTextures();
 	Gfx_LoadFloorTextures();
@@ -540,7 +531,15 @@ void Gfx_Shutdown( void ) {
 }
 
 static void Gfx_DrawViewSprite( void ) {
-
+#if 0
+	int gunWidth = 320 / 1.5;
+	int gunHeight = 200 / 1.5;
+	plDrawTexturedRectangle(
+		YIN_DISPLAY_WIDTH / 2 - ( gunWidth / 2 ),
+		YIN_DISPLAY_HEIGHT - gunHeight,
+		gunWidth, gunHeight,
+		testSprite );
+#endif
 }
 
 void Gfx_DisplayMenu( void ) {
@@ -564,29 +563,21 @@ void Gfx_DisplayMenu( void ) {
 			Gfx_DrawViewSprite();
 
 			plDrawTexturedRectangle( &transform, 0, 0, YIN_DISPLAY_WIDTH, YIN_DISPLAY_HEIGHT, playScrnTexture );
-
-#if 0
-			int gunWidth = 320 / 1.5;
-			int gunHeight = 200 / 1.5;
-			plDrawTexturedRectangle(
-					YIN_DISPLAY_WIDTH / 2 - ( gunWidth / 2 ),
-					YIN_DISPLAY_HEIGHT - gunHeight,
-					gunWidth, gunHeight,
-					testSprite );
-#endif
 			break;
 	}
 #endif
 }
 
 void Gfx_DrawAxesPivot( PLVector3 position, PLVector3 rotation ) {
-	PLMatrix4 transform = plTranslateMatrix4( position );
+	PLMatrix4 transform;
+	transform = plMatrix4Identity();
 	transform = plMultiplyMatrix4( transform,
 								   plRotateMatrix4( plDegreesToRadians( rotation.x ), PLVector3( 1, 0, 0 ) ));
 	transform = plMultiplyMatrix4( transform,
 								   plRotateMatrix4( plDegreesToRadians( rotation.y ), PLVector3( 0, 1, 0 ) ));
 	transform = plMultiplyMatrix4( transform,
 								   plRotateMatrix4( plDegreesToRadians( rotation.z ), PLVector3( 0, 0, 1 ) ));
+	transform = plMultiplyMatrix4( transform, plTranslateMatrix4( position ) );
 	plDrawSimpleLine( &transform, &PLVector3( 0, 0, 0 ), &PLVector3( 10, 0, 0 ), &PLColour( 255, 0, 0, 255 ) );
 	plDrawSimpleLine( &transform, &PLVector3( 0, 0, 0 ), &PLVector3( 0, 10, 0 ), &PLColour( 0, 255, 0, 255 ) );
 	plDrawSimpleLine( &transform, &PLVector3( 0, 0, 0 ), &PLVector3( 0, 0, 10 ), &PLColour( 0, 0, 255, 255 ) );

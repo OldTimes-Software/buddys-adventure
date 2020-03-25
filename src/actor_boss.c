@@ -18,7 +18,7 @@ void Boss_Draw( Actor *self, void *userData ) {
 	}
 
 	ABoss *bossData = ( ABoss* ) userData;
-	//Gfx_DrawAnimationFrame( bossData->walkFrames[ 0 ], Act_GetPosition( self ) );
+	Gfx_DrawAnimationFrame( bossData->walkFrames[ 0 ], Act_GetPosition( self ) );
 }
 
 void Boss_Spawn( Actor *self ) {

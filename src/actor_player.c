@@ -96,12 +96,18 @@ void Player_Tick( Actor *self, void *userData ) {
 
 	PLVector3 curVelocity = Act_GetVelocity( self );
 	curVelocity = plScaleVector3f( Act_GetForward( self ), playerData->forwardVelocity );
-
-	PLVector3 curPosition = Act_GetPosition( self );
-	curPosition = plAddVector3( curPosition, curVelocity );
-
-	Act_SetPosition( self, &curPosition );
 	Act_SetVelocity( self, &curVelocity );
 
 	Player_CalculateViewFrustum( self );
+}
+
+void Player_Collide( Actor *self, Actor *other, void *userData ) {
+	APlayer *playerData = (APlayer *)userData;
+	playerData->forwardVelocity = -2.0f;
+
+	if( other != NULL ) {
+		/* probably colliding with another actor, give them a push... */
+		PLVector3 invVelocity = plInverseVector3( Act_GetVelocity( self ) );
+		Act_SetVelocity( other, &invVelocity );
+	}
 }

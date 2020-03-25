@@ -60,12 +60,12 @@ enum {
 	LOG_LEVEL_INFO,
 };
 
+//#define DEBUG_CAM
+#define DEBUG_WALL_NORMALS
+
 #define PrintError( ... ) plLogMessage( LOG_LEVEL_ERROR, __VA_ARGS__ ); exit( EXIT_FAILURE )
 #define PrintWarn( ... )  plLogMessage( LOG_LEVEL_WARN, __VA_ARGS__ )
 #define PrintMsg( ... )   plLogMessage( LOG_LEVEL_INFO, __VA_ARGS__ )
-
-//#define DEBUG_CAM
-#define DEBUG_WALL_NORMALS
 
 extern PLPackage *globalWad;
 #define YIN_GLOBAL_WAD "yin.wad"

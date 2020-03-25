@@ -12,6 +12,7 @@ typedef struct ActorSetup {
 	void (*Spawn)( struct Actor *self );
 	void (*Tick)( struct Actor *self, void *userData );
 	void (*Draw)( struct Actor *self, void *userData );
+	void (*Collide)( struct Actor *self, struct Actor *other, void *userData );
 	void (*Destroy)( struct Actor *self, void *userData );
 } ActorSetup;
 
@@ -28,24 +29,28 @@ void Sarg_Spawn( Actor *self );
 
 void Player_Spawn( Actor *self );
 void Player_Tick( Actor *self, void *userData );
+void Player_Collide( Actor *self, Actor *other, void *userData );
 
 ActorSetup actorSpawnSetup[ MAX_ACTOR_TYPES ] = {
-		[ ACTOR_NONE   ] = { NULL, NULL, NULL, NULL },
-		[ ACTOR_PLAYER ] = { Player_Spawn, Player_Tick, Act_DrawBasic, NULL },
-		[ ACTOR_BOSS   ] = { Boss_Spawn, NULL, Boss_Draw, NULL },
-		[ ACTOR_SARG   ] = { Sarg_Spawn, NULL, Act_DrawBasic, NULL },
-		[ ACTOR_TROO   ] = { Troo_Spawn, NULL, Troo_Draw, NULL },
+		[ ACTOR_NONE   ] = { NULL, NULL, NULL, NULL, NULL },
+		[ ACTOR_PLAYER ] = { Player_Spawn, Player_Tick, NULL, Player_Collide, NULL },
+		[ ACTOR_BOSS   ] = { Boss_Spawn, NULL, Boss_Draw, NULL, NULL },
+		[ ACTOR_SARG   ] = { Sarg_Spawn, NULL, Act_DrawBasic, NULL, NULL },
+		[ ACTOR_TROO   ] = { Troo_Spawn, NULL, Troo_Draw, NULL, NULL },
 };
 
 typedef struct Actor {
-	PLVector3 position;
-	PLVector3 velocity;
-	PLVector3 forward;
-	float     angle;
-	float     viewOffset;
-	PLAABB    bounds;
+	PLVector3    position;
+	PLVector3    velocity;
+	PLVector3    forward;
+	float        angle;
+	float        viewOffset;
+	unsigned int area;
+	PLAABB       bounds;
 
+	/* animation */
 	unsigned int currentFrame;
+	unsigned int frameSwapTime;
 
 	ActorType  type;
 	ActorSetup setup;
@@ -54,19 +59,20 @@ typedef struct Actor {
 	void             *userData;
 } Actor;
 
-PLLinkedList *actorList;
+static PLLinkedList *actorList;
 
 Actor *Act_SpawnActor( ActorType type, PLVector3 position, float angle ) {
 	Actor *actor = Sys_AllocateMemory( 1, sizeof( Actor ) );
 	actor->node     = plInsertLinkedListNode( actorList, actor );
 	actor->setup    = actorSpawnSetup[ type ];
+	actor->area     = 0;
 	actor->type     = type;
 	actor->position = position;
 	actor->angle    = angle;
 
 	/* give everything a set of basic bounds */
-	actor->bounds.maxs = PLVector3( 8.0f, 16.0f, 8.0f );
-	actor->bounds.mins = PLVector3( -8.0f, 0.0f, -8.0f );
+	actor->bounds.maxs = PLVector3( 16.0f, 16.0f, 16.0f );
+	actor->bounds.mins = PLVector3( -16.0f, -16.0f, -16.0f );
 
 	if ( actor->setup.Spawn != NULL ) {
 		actor->setup.Spawn( actor );
@@ -97,6 +103,14 @@ void      Act_SetViewOffset( Actor *self, float viewOffset ) { self->viewOffset 
 float     Act_GetViewOffset( Actor *self ) { return self->viewOffset; }
 void      Act_SetUserData( Actor *self, void *userData ) { self->userData = userData; }
 void      *Act_GetUserData( Actor *self ) { return self->userData; }
+
+void Act_SetCurrentFrame( Actor *self, unsigned int frame ) {
+	self->currentFrame = frame;
+}
+
+unsigned int Act_GetCurrentFrame( const Actor *self ) {
+	return self->currentFrame;
+}
 
 void Act_SetBounds( Actor *self, PLVector3 mins, PLVector3 maxs ) {
 	if( mins.x > maxs.x || mins.y > maxs.y || mins.z > maxs.z ) {
@@ -153,6 +167,39 @@ void Act_SpawnActors( void ) {
 	}
 }
 
+static bool Act_IsColliding( Actor *self, Actor *other ) {
+	if( self->area != other->area ) {
+		return false;
+	}
+
+	return plIntersectAABB( &self->position, &self->bounds, &other->position, &other->bounds );
+}
+
+static Actor *Act_CheckCollisions( Actor *self ) {
+	/* in the future, perhaps it's worth tracking multiple lists per sector? */
+	PLLinkedListNode *curNode = plGetRootNode( actorList );
+	while( curNode != NULL ) {
+		Actor *actor = plGetLinkedListNodeUserData( curNode );
+		if( actor == NULL ) {
+			PrintError( "Invalid actor data in node!\n" );
+		}
+
+		/* "don't have time to play with myself" */
+		if( actor == self ) {
+			curNode = plGetNextLinkedListNode( curNode );
+			continue;
+		}
+
+		if( Act_IsColliding( self, actor ) ) {
+			return actor;
+		}
+
+		curNode = plGetNextLinkedListNode( curNode );
+	}
+
+	return NULL;
+}
+
 void Act_DisplayActors( void ) {
 	PLLinkedListNode *curNode = plGetRootNode( actorList );
 	while ( curNode != NULL ) {
@@ -177,19 +224,36 @@ void Act_TickActors( void ) {
 			PrintError( "Invalid actor data in node!\n" );
 		}
 
-		if ( actor->setup.Tick ) {
+		if ( actor->setup.Tick != NULL ) {
 			actor->setup.Tick( actor, actor->userData );
 		}
 
 		plAnglesAxes( PLVector3( 0, actor->angle, 0 ), NULL, NULL, &actor->forward );
+
+		actor->position = plAddVector3( actor->position, actor->velocity );
+		if( actor->type != ACTOR_PLAYER ) {
+			static const float friction = 16.0f;
+			if( actor->velocity.x != 0 ) {
+				actor->velocity.x -= ( actor->velocity.x / friction );
+			}
+			if( actor->velocity.y != 0 ) {
+				actor->velocity.y -= ( actor->velocity.y / friction );
+			}
+			if( actor->velocity.z != 0 ) {
+				actor->velocity.z -= ( actor->velocity.z / friction );
+			}
+		}
+
+		Actor *collider = Act_CheckCollisions( actor );
+		if( collider != NULL && actor->setup.Collide != NULL ) {
+			actor->setup.Collide( actor, collider, actor->userData );
+		}
 
 		curNode = plGetNextLinkedListNode( curNode );
 	}
 }
 
 void Act_Initialize( void ) {
-	PrintMsg( "Initializing Act...\n" );
-
 	actorList = plCreateLinkedList();
 	if ( actorList == NULL) {
 		PrintError( "Failed to create actor list!\nPL: %s\n", plGetError());
