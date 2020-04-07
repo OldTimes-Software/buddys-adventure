@@ -46,5 +46,8 @@ void         Act_SetBounds( Actor *self, PLVector3 mins, PLVector3 maxs );
 const PLAABB *Act_GetBounds( Actor *self );
 PLVector3    Act_GetForward( const Actor *self );
 
+/* generic monster functions */
+void Monster_Collide( struct Actor *self, struct Actor *other, void *userData );
+
 /* player functions */
 bool Player_IsPointVisible( Actor *self, const PLVector2 *point );

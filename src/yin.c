@@ -84,6 +84,7 @@ static void Sys_KeyboardUp( unsigned char key, int x, int y ) {
 }
 
 static void Sys_Reshape( int width, int height ) {
+	/* this seems to be broken, at least from what I tested on Windows 10 */
 	//glutReshapeWindow( YIN_DISPLAY_WIDTH, YIN_DISPLAY_HEIGHT );
 }
 
@@ -114,7 +115,9 @@ int Sys_Init( int argc, char **argv ) {
 	/* mount all the dirs we need */
 	plMountLocation( "./" );
 
+#if 0 /* don't need this anymore */
 	plSetupLogOutput( "log.txt" );
+#endif
 	plSetupLogLevel( LOG_LEVEL_ERROR, "error", PL_COLOUR_RED, true );
 	plSetupLogLevel( LOG_LEVEL_WARN, "warning", PL_COLOUR_ORANGE, true );
 	plSetupLogLevel( LOG_LEVEL_INFO, NULL, PL_COLOUR_WHITE, true );

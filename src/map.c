@@ -148,6 +148,27 @@ void Map_Load( PLPackage *wad ) {
 	Map_LoadAreas( wad );
 }
 
+bool Map_CheckCollisions( const PLCollisionAABB *bounds, unsigned int curArea ) {
+	const MapArea *area = &mapData.areas[ curArea ];
+	for( unsigned int j = 0; j < area->numLines; ++j ) {
+		MapLine  *line = &mapData.lines[ area->lineIndices[ j ] ];
+		MapPoint *startPoint = &mapData.points[ line->startVertex ];
+		MapPoint *endPoint = &mapData.points[ line->endVertex ];
+
+		//bool hit = plIsAABBIntersectingLine( bounds, &PLVector2( startPoint->x, startPoint->y ), &PLVector2( endPoint->x, endPoint->y ), &line->normal );
+		float hitValue;
+		bool hit = plIsPointIntersectingLine( &PLVector2( bounds->origin.x, bounds->origin.z ), &PLVector2( startPoint->x, startPoint->y ), &PLVector2( endPoint->x, endPoint->y ), &line->normal, &hitValue );
+		if( hit ) {
+			//PrintMsg( "HIT: %f\n", hitValue );
+			//return true;
+		}
+
+		//PrintMsg( "NO HIT: %f\n", hitValue );
+	}
+
+	return false;
+}
+
 void Map_Draw( void ) {
 	/* fetch the local player so we can perform vis testing */
 	Actor *player = Gam_GetPlayer();
@@ -156,6 +177,10 @@ void Map_Draw( void ) {
 	}
 
 	Gfx_EnableShaderProgram( SHADER_LIT );
+
+	/* prototype only supports a single wall texture at a time */
+	PLTexture *wallTexture = Gfx_GetWallTexture( 20 );
+	unsigned int wallHeight = wallTexture->h * 2;
 
 	for ( unsigned int i = 0; i < mapData.numAreas; ++i ) {
 		const MapArea *area = &mapData.areas[ i ];
@@ -170,16 +195,14 @@ void Map_Draw( void ) {
 				continue;
 			}
 
-			PLTexture *texture = Gfx_GetWallTexture( 20 );
-			unsigned int wallHeight = texture->h * 2;
-
+			/* in the long term this should obviously all just get batched... */
 			plDrawTexturedQuad(
 					&PLVector3( startPoint->x, wallHeight, startPoint->y ),
 					&PLVector3( endPoint->x, wallHeight, endPoint->y ),
 					&PLVector3( startPoint->x, 0, startPoint->y ),
 					&PLVector3( endPoint->x, 0, endPoint->y ),
 					2, 2,
-					texture
+					wallTexture
 			);
 
 #ifdef DEBUG_WALL_NORMALS
@@ -210,10 +233,10 @@ void Map_Draw( void ) {
 		);
 #ifndef DEBUG_CAM
 		plDrawTexturedQuad(
-				&PLVector3( area->max[ 0 ], 128.0f, area->max[ 1 ] ),
-				&PLVector3( area->min[ 0 ], 128.0f, area->max[ 1 ] ),
-				&PLVector3( area->max[ 0 ], 128.0f, area->min[ 1 ] ),
-				&PLVector3( area->min[ 0 ], 128.0f, area->min[ 1 ] ),
+				&PLVector3( area->max[ 0 ], wallHeight, area->max[ 1 ] ),
+				&PLVector3( area->min[ 0 ], wallHeight, area->max[ 1 ] ),
+				&PLVector3( area->max[ 0 ], wallHeight, area->min[ 1 ] ),
+				&PLVector3( area->min[ 0 ], wallHeight, area->min[ 1 ] ),
 				2, 2,
 				Gfx_GetFloorTexture( 1 )
 		);

@@ -35,3 +35,5 @@ typedef struct MapArea {
 
 void Map_Load( PLPackage *wad );
 void Map_Draw( void );
+
+bool Map_CheckCollisions( const PLCollisionAABB *bounds, unsigned int curArea );

@@ -7,6 +7,7 @@
 #include "yin.h"
 #include "act.h"
 #include "gfx.h"
+#include "map.h"
 
 typedef struct ActorSetup {
 	void (*Spawn)( struct Actor *self );
@@ -16,27 +17,41 @@ typedef struct ActorSetup {
 	void (*Destroy)( struct Actor *self, void *userData );
 } ActorSetup;
 
-void Act_DrawBasic( Actor *self, void *userData ) {
+static void Act_DrawBasic( Actor *self, void *userData ) {
 	Gfx_EnableShaderProgram( SHADER_GENERIC );
 	Gfx_DrawAxesPivot( Act_GetPosition( self ), PLVector3( 0, 0, 0 ) );
 }
 
+void Monster_Collide( struct Actor *self, struct Actor *other, void *userData ) {
+	if( other != NULL ) {
+		/* probably colliding with another actor, give them a push... */
+		PLVector3 curVelocity = Act_GetVelocity( self );
+		Act_SetVelocity( other, &curVelocity );
+	}
+
+	/* otherwise, probably world collision */
+}
+
 void Boss_Spawn( Actor *self );
 void Boss_Draw( Actor *self, void *userData );
+void Boss_Tick( Actor *self, void *userData );
 void Troo_Spawn( Actor *self );
 void Troo_Draw( Actor *self, void *userData );
+void Troo_Tick( Actor *self, void *userData );
 void Sarg_Spawn( Actor *self );
+void Sarg_Draw( Actor *self, void *userData );
+void Sarg_Tick( Actor *self, void *userData );
 
 void Player_Spawn( Actor *self );
 void Player_Tick( Actor *self, void *userData );
 void Player_Collide( Actor *self, Actor *other, void *userData );
 
 ActorSetup actorSpawnSetup[ MAX_ACTOR_TYPES ] = {
-		[ ACTOR_NONE   ] = { NULL, NULL, NULL, NULL, NULL },
+		[ ACTOR_NONE   ] = { NULL, NULL, Act_DrawBasic, NULL, NULL },
 		[ ACTOR_PLAYER ] = { Player_Spawn, Player_Tick, NULL, Player_Collide, NULL },
-		[ ACTOR_BOSS   ] = { Boss_Spawn, NULL, Boss_Draw, NULL, NULL },
-		[ ACTOR_SARG   ] = { Sarg_Spawn, NULL, Act_DrawBasic, NULL, NULL },
-		[ ACTOR_TROO   ] = { Troo_Spawn, NULL, Troo_Draw, NULL, NULL },
+		[ ACTOR_BOSS   ] = { Boss_Spawn, Boss_Tick, Boss_Draw, Monster_Collide, NULL },
+		[ ACTOR_SARG   ] = { Sarg_Spawn, Troo_Tick, Sarg_Draw, Monster_Collide, NULL },
+		[ ACTOR_TROO   ] = { Troo_Spawn, Sarg_Tick, Troo_Draw, Monster_Collide, NULL },
 };
 
 typedef struct Actor {
@@ -172,7 +187,7 @@ static bool Act_IsColliding( Actor *self, Actor *other ) {
 		return false;
 	}
 
-	return plIntersectAABB( &self->position, &self->bounds, &other->position, &other->bounds );
+	return plIsAABBIntersecting( &self->bounds, &other->bounds );
 }
 
 static Actor *Act_CheckCollisions( Actor *self ) {
@@ -244,9 +259,21 @@ void Act_TickActors( void ) {
 			}
 		}
 
-		Actor *collider = Act_CheckCollisions( actor );
-		if( collider != NULL && actor->setup.Collide != NULL ) {
-			actor->setup.Collide( actor, collider, actor->userData );
+		/* ensure bounds origin is kept updated */
+		actor->bounds.origin = actor->position;
+
+		/* check actor vs actor collision */
+		if( actor->setup.Collide != NULL ) {
+			Actor *collider = Act_CheckCollisions( actor );
+			if( collider != NULL ) {
+				actor->setup.Collide( actor, collider, actor->userData );
+			}
+
+			/* and now check actor vs world collision */
+			if( actor->type == ACTOR_PLAYER && Map_CheckCollisions( &actor->bounds, actor->area ) ) {
+				PrintMsg( "COLLIDING...\n" );
+				actor->setup.Collide( actor, NULL, actor->userData );
+			}
 		}
 
 		curNode = plGetNextLinkedListNode( curNode );

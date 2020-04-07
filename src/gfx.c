@@ -379,14 +379,7 @@ void Gfx_EnableShaderProgram( GfxShaderType type ) {
 	plSetShaderProgram( shaderPrograms[ type ] );
 }
 
-void Gfx_DrawAnimationFrame( GfxAnimationFrame *frame, PLVector3 position ) {
-	/* here we go, dumb maths written by dumb me... */
-	PLVector2 a = PLVector2( position.x, position.z );
-	PLVector2 b = PLVector2( playerCamera->position.x, playerCamera->position.z );
-	PLVector2 normal = plComputeLineNormal( &a, &b );
-
-	float spriteAngle = atan2f( normal.y, normal.x ) * PL_180_DIV_PI;
-
+void Gfx_DrawAnimationFrame( GfxAnimationFrame *frame, const PLVector3 *position, float spriteAngle ) {
 	PLMatrix4 transform;
 	transform = plMatrix4Identity();
 	transform = plMultiplyMatrix4( transform,
@@ -395,16 +388,7 @@ void Gfx_DrawAnimationFrame( GfxAnimationFrame *frame, PLVector3 position ) {
 								   plRotateMatrix4( plDegreesToRadians( spriteAngle ), PLVector3( 0, 1, 0 ) ));
 	transform = plMultiplyMatrix4( transform,
 								   plRotateMatrix4( plDegreesToRadians( 180.0f ), PLVector3( 0, 0, 1 ) ));
-	transform = plMultiplyMatrix4( transform, plTranslateMatrix4( position ) );
-
-#if 0 /* debug */
-	Gfx_EnableShaderProgram( SHADER_GENERIC );
-
-	PLMatrix4 dTransform = plMatrix4Identity();
-	PLVector3 dStartPos = PLVector3( position.x, 4.0f, position.z );
-	PLVector3 dEndPos   = plAddVector3( dStartPos, plScaleVector3f( PLVector3( normal.x, 0.0f, normal.y ), 256.0f ) );
-	plDrawSimpleLine( &dTransform, &dStartPos, &dEndPos, &PLColourRGB( 0, 0, 255 ) );
-#endif
+	transform = plMultiplyMatrix4( transform, plTranslateMatrix4( *position ) );
 
 	Gfx_EnableShaderProgram( SHADER_LIT );
 
@@ -423,8 +407,42 @@ void Gfx_DrawAnimationFrame( GfxAnimationFrame *frame, PLVector3 position ) {
 	plDrawTexturedRectangle( &transform, x, y, w, h, frame->texture );
 }
 
-void Gfx_DrawAnimation( GfxAnimationFrame **animation, unsigned int numFrames, bool hasAngles ) {
+void Gfx_DrawAnimation( GfxAnimationFrame **animation, unsigned int numFrames, unsigned int curFrame, const PLVector3 *position, float angle ) {
+	/* here we go, dumb maths written by dumb me... */
+	PLVector2 a = PLVector2( position->x, position->z );
+	PLVector2 b = PLVector2( playerCamera->position.x, playerCamera->position.z );
+	PLVector2 normal = plComputeLineNormal( &a, &b );
 
+	float spriteAngle = atan2f( normal.y, normal.x ) * PL_180_DIV_PI;
+
+	/* should really account for the intended angle, but hey ho...
+	 * there are some further improvements to make here - again, running out of time! */
+	unsigned int frameColumn = 1;
+	float frameAngle = spriteAngle < 0 ? spriteAngle + 360 : spriteAngle;
+	if( frameAngle > 315.0f ) {
+		frameColumn = 2;
+	} else if( frameAngle > 270.0f ) {
+		frameColumn = 3;
+	} else if( frameAngle > 225.0f ) {
+		frameColumn = 4;
+	} else if( frameAngle > 180.0f ) {
+		frameColumn = 5;
+	} else if( frameAngle > 135.0f ) {
+		frameColumn = 6;
+	} else if( frameAngle > 90.0f ) {
+		frameColumn = 7;
+	} else if( frameAngle > 45.0f ) {
+		frameColumn = 8;
+	}
+
+	curFrame *= GFX_NUM_SPRITE_ANGLES;
+	unsigned int actualFrame = curFrame + ( frameColumn - 1 );
+	if( actualFrame > numFrames ) {
+		PrintWarn( "Out of scope frame, %d/%d!\n", actualFrame, numFrames );
+		actualFrame = numFrames;
+	}
+
+	Gfx_DrawAnimationFrame( animation[ actualFrame ], position, spriteAngle );
 }
 
 void Gfx_DrawDigit( int x, int y, int digit ) {
@@ -600,16 +618,9 @@ void Gfx_DisplayScene( void ) {
 	playerCamera->angles.x = -85;
 	playerCamera->angles.y = -Act_GetAngle( player ) + 90.0f;
 #else
-	playerCamera->angles.y = -Act_GetAngle( player ) + 90.0f;
-	playerCamera->position = Act_GetPosition( player );
-
-	/* view bob! */
-	PLVector3 velocity = Act_GetVelocity( player );
-	float velocityVector = plVector3Length( &velocity );
-	static float viewBob;
-	viewBob += ( sinf( Sys_GetNumTicks() * 100.0f ) / 100.0f ) * velocityVector;
-
-	playerCamera->position.y = Act_GetViewOffset( player ) + viewBob;
+	playerCamera->angles.y   = -Act_GetAngle( player ) + 90.0f;
+	playerCamera->position   = Act_GetPosition( player );
+	playerCamera->position.y = Act_GetViewOffset( player );
 #endif
 
 	Gfx_EnableShaderProgram( SHADER_GENERIC );
@@ -624,7 +635,7 @@ void Gfx_DisplayScene( void ) {
 
 	PLVector3 startPos = Act_GetPosition( player );
 	startPos.y += Act_GetViewOffset( player );
-	PLVector3 endPos = plAddVector3( startPos, plScaleVector3f( forward, 512.0f ) );
+	PLVector3 endPos = plAddVector3( startPos, plScaleVector3f( forward, 64.0f ) );
 	plDrawLine( &mat, &startPos, &PLColour( 0, 0, 255, 255 ), &endPos, &PLColour( 0, 0, 255, 255 ) );
 
 	startPos = endPos;

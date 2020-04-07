@@ -13,11 +13,14 @@ typedef enum GfxShaderType {
 	MAX_SHADER_TYPES
 } GfxShaderType;
 
+/* todo: introduce container around this */
 typedef struct GfxAnimationFrame {
 	unsigned int leftOffset;
 	unsigned int topOffset;
 	PLTexture    *texture;
 } GfxAnimationFrame;
+
+#define GFX_NUM_SPRITE_ANGLES 8
 
 void Gfx_Initialize( void );
 void Gfx_Shutdown( void );
@@ -25,7 +28,8 @@ void Gfx_Display( void );
 void Gfx_EnableShaderProgram( GfxShaderType type );
 
 void Gfx_DrawAxesPivot( PLVector3 position, PLVector3 rotation );
-void Gfx_DrawAnimationFrame( GfxAnimationFrame *frame, PLVector3 position );
+void Gfx_DrawAnimationFrame( GfxAnimationFrame *frame, const PLVector3 *position, float spriteAngle );
+void Gfx_DrawAnimation( GfxAnimationFrame **animation, unsigned int numFrames, unsigned int curFrame, const PLVector3 *position, float angle );
 
 void Gfx_LoadAnimationFrames( const char **frameList, GfxAnimationFrame **destination, unsigned int numFrames );
 

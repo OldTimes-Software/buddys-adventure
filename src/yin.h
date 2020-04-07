@@ -11,8 +11,6 @@
 
 #include <assert.h>
 
-#define YIN_VERSION 20200308
-
 #define YIN_DISPLAY_WIDTH  640
 #define YIN_DISPLAY_HEIGHT 400
 
@@ -21,7 +19,7 @@
 
 #define YIN_WINDOW_TITLE "Buddy's Adventure"
 
-#define YIN_TICK_RATE 24 /* ms */
+#define YIN_TICK_RATE 1000 / 60 /* ms */
 
 #define u_unused( a ) ( void )( ( a ) )
 
@@ -60,8 +58,8 @@ enum {
 	LOG_LEVEL_INFO,
 };
 
-//#define DEBUG_CAM
-#define DEBUG_WALL_NORMALS
+#define DEBUG_CAM
+//#define DEBUG_WALL_NORMALS
 
 #define PrintError( ... ) plLogMessage( LOG_LEVEL_ERROR, __VA_ARGS__ ); exit( EXIT_FAILURE )
 #define PrintWarn( ... )  plLogMessage( LOG_LEVEL_WARN, __VA_ARGS__ )

@@ -7,9 +7,10 @@
 
 #define PLAYER_VIEW_OFFSET  75.0f
 
-#define PLAYER_TURN_SPEED    4.5f
-#define PLAYER_FORWARD_SPEED 10.0f
-#define PLAYER_MAX_VELOCITY  PLAYER_FORWARD_SPEED
+#define PLAYER_TURN_SPEED    2.0f
+#define PLAYER_WALK_SPEED    5.0f
+#define PLAYER_RUN_SPEED     8.0f
+#define PLAYER_MAX_VELOCITY  PLAYER_RUN_SPEED
 #define PLAYER_MIN_VELOCITY  0.5f
 
 typedef struct APlayer {
@@ -18,9 +19,10 @@ typedef struct APlayer {
 	PLVector3 llViewPos;
 	PLVector3 lrViewPos;
 
-	PLVector3 cViewPos; /* center */
+	PLVector3 centerView; /* center */
 
 	float forwardVelocity;
+	float viewBob;
 } APlayer;
 
 static void Player_CalculateViewFrustum( Actor *self ) {
@@ -30,7 +32,14 @@ static void Player_CalculateViewFrustum( Actor *self ) {
 	plAnglesAxes( PLVector3( 0, Act_GetAngle( self ), 0 ), &left, NULL, &forward );
 
 	PLVector3 curPos = Act_GetPosition( self );
-	playerData->cViewPos = plAddVector3( curPos, plScaleVector3f( forward, 2048.0f ) );
+	curPos.y += Act_GetViewOffset( self );
+
+	playerData->centerView = plAddVector3( curPos, plScaleVector3f( forward, 1000.0f ) );
+
+	playerData->llViewPos = plAddVector3( curPos, plScaleVector3f( left, 64.0f ) );
+	playerData->lrViewPos = plSubtractVector3( curPos, plScaleVector3f( left, 64.0f ) );
+
+	/* in future, set this up properly relative to view */
 }
 
 /**
@@ -46,22 +55,17 @@ bool Player_IsPointVisible( Actor *self, const PLVector2 *point ) {
 		return false;
 	}
 
-#if 0 /* maybe for the next jam... */
-	PLVector3 testPos = PLVector3( point->x, 0.0f, point->y );
+	PLVector2 lineStart = PLVector2( playerData->llViewPos.x, playerData->llViewPos.z );
+	PLVector2 lineEnd = PLVector2( playerData->lrViewPos.x, playerData->lrViewPos.z );
 
-	PLVector3 forward = Act_GetForward( self );
-	PLVector3 curPos = Act_GetPosition( self );
+	/* in future, set this up properly relative to view */
 
-	float d = plVector3DotProduct( forward, testPos );
-	if ( d < 0.0f ) {
-		PrintMsg( "%f\n", d );
+	float d = plTestPointLinePosition( point, &lineStart, &lineEnd );
+	if( d > 0.0f ) {
 		return false;
 	}
-	
+
 	return true;
-#else
-	return true;
-#endif
 }
 
 void Player_Spawn( Actor *self ) {
@@ -82,32 +86,38 @@ void Player_Tick( Actor *self, void *userData ) {
 	}
 	Act_SetAngle( self, nAngle );
 
+	static const float incAmount = 0.25f;
 	APlayer *playerData = ( APlayer * ) userData;
 	if ( Sys_GetInputState( YIN_INPUT_UP ) ) {
-		playerData->forwardVelocity += 1.0f;
+		playerData->forwardVelocity += incAmount;
 	} else if ( Sys_GetInputState( YIN_INPUT_DOWN ) ) {
-		playerData->forwardVelocity -= 1.0f;
+		playerData->forwardVelocity -= incAmount;
 	} else if ( playerData->forwardVelocity != 0.0f ) {
-		playerData->forwardVelocity += ( playerData->forwardVelocity > 0.0f ) ? -1.0f : 1.0f;
+		playerData->forwardVelocity = playerData->forwardVelocity > 0 ? playerData->forwardVelocity - incAmount : playerData->forwardVelocity + incAmount;
+		if( playerData->forwardVelocity < 0.1f && playerData->forwardVelocity > -0.1f ) {
+			playerData->forwardVelocity = 0.0f;
+		}
 	}
 
 	/* clamp the velocity as necessary */
-	playerData->forwardVelocity = plClamp( -PLAYER_MAX_VELOCITY, playerData->forwardVelocity, PLAYER_MAX_VELOCITY );
+	float maxVelocity = Sys_GetInputState( YIN_INPUT_LEFT_STICK ) ? PLAYER_RUN_SPEED : PLAYER_WALK_SPEED;
+	playerData->forwardVelocity = plClamp( -maxVelocity, playerData->forwardVelocity, maxVelocity );
 
 	PLVector3 curVelocity = Act_GetVelocity( self );
 	curVelocity = plScaleVector3f( Act_GetForward( self ), playerData->forwardVelocity );
 	Act_SetVelocity( self, &curVelocity );
 
 	Player_CalculateViewFrustum( self );
+
+	/* apply view bob */
+	float velocityVector = plVector3Length( &curVelocity );
+	playerData->viewBob += ( sinf( Sys_GetNumTicks() / 5.0f ) / 10.0f ) * velocityVector;
+	Act_SetViewOffset( self, PLAYER_VIEW_OFFSET + playerData->viewBob );
 }
 
 void Player_Collide( Actor *self, Actor *other, void *userData ) {
-	APlayer *playerData = (APlayer *)userData;
-	playerData->forwardVelocity = -2.0f;
+	Monster_Collide( self, other, userData );
 
-	if( other != NULL ) {
-		/* probably colliding with another actor, give them a push... */
-		PLVector3 invVelocity = plInverseVector3( Act_GetVelocity( self ) );
-		Act_SetVelocity( other, &invVelocity );
-	}
+	APlayer *playerData = (APlayer *)userData;
+	playerData->forwardVelocity = ( playerData->forwardVelocity / 2.0f ) * -1.0f;
 }
